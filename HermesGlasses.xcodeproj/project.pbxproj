@@ -48,6 +48,7 @@
 		AAAA00000000000000000827 /* PermissionsCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000828 /* PermissionsCoordinator.swift */; };
 		AAAA00000000000000000829 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000830 /* OnboardingView.swift */; };
 		AAAA00000000000000000831 /* SimulatedLensView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000832 /* SimulatedLensView.swift */; };
+		AAAA00000000000000000F51 /* LensArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F52 /* LensArt.swift */; };
 		AAAA00000000000000000835 /* VisionRouting.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000836 /* VisionRouting.swift */; };
 		AAAA00000000000000000841 /* ChoiceDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000842 /* ChoiceDetector.swift */; };
 		AAAA00000000000000000A63 /* EmoDrink/ChangeGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000A64 /* EmoDrink/ChangeGate.swift */; };
@@ -56,6 +57,7 @@
 		AAAA00000000000000000F21 /* VendingMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F22 /* VendingMachine.swift */; };
 		AAAA00000000000000000F33 /* ShowcaseStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F34 /* ShowcaseStrings.swift */; };
 		AAAA00000000000000000F37 /* ShowcaseDirector.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F38 /* ShowcaseDirector.swift */; };
+		AAAA00000000000000000F53 /* LensRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F54 /* LensRenderer.swift */; };
 		AAAA00000000000000000F31 /* GuestProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F32 /* GuestProfile.swift */; };
 		AAAA00000000000000000E03 /* EmoDrink/DrinkCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E04 /* EmoDrink/DrinkCatalog.swift */; };
 		AAAA00000000000000000E05 /* Resources/EmoDrink/asahi-drinks.json in Resources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E06 /* Resources/EmoDrink/asahi-drinks.json */; };
@@ -133,6 +135,7 @@
 		AAAA00000000000000000828 /* PermissionsCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsCoordinator.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000830 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000832 /* SimulatedLensView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatedLensView.swift; sourceTree = "<group>"; };
+		AAAA00000000000000000F52 /* LensArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/LensArt.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000836 /* VisionRouting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionRouting.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000842 /* ChoiceDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChoiceDetector.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000A64 /* EmoDrink/ChangeGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/ChangeGate.swift; sourceTree = "<group>"; };
@@ -141,6 +144,7 @@
 		AAAA00000000000000000F22 /* VendingMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/VendingMachine.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F34 /* ShowcaseStrings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/ShowcaseStrings.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F38 /* ShowcaseDirector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/ShowcaseDirector.swift; sourceTree = "<group>"; };
+		AAAA00000000000000000F54 /* LensRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/LensRenderer.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F32 /* GuestProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/GuestProfile.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E04 /* EmoDrink/DrinkCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/DrinkCatalog.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E06 /* Resources/EmoDrink/asahi-drinks.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "Resources/EmoDrink/asahi-drinks.json"; sourceTree = "<group>"; };
@@ -226,6 +230,7 @@
 				AAAA00000000000000000818 /* HermesDesign.swift */,
 				AAAA00000000000000000830 /* OnboardingView.swift */,
 				AAAA00000000000000000832 /* SimulatedLensView.swift */,
+				AAAA00000000000000000F52 /* LensArt.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -276,6 +281,7 @@
 				AAAA00000000000000000F22 /* VendingMachine.swift */,
 				AAAA00000000000000000F34 /* ShowcaseStrings.swift */,
 				AAAA00000000000000000F38 /* ShowcaseDirector.swift */,
+				AAAA00000000000000000F54 /* LensRenderer.swift */,
 				AAAA00000000000000000F32 /* GuestProfile.swift */,
 				AAAA00000000000000000E04 /* EmoDrink/DrinkCatalog.swift */,
 				AAAA00000000000000000E08 /* EmoDrink/DrinkRecommender.swift */,
@@ -425,6 +431,7 @@
 				AAAA00000000000000000827 /* PermissionsCoordinator.swift in Sources */,
 				AAAA00000000000000000829 /* OnboardingView.swift in Sources */,
 				AAAA00000000000000000831 /* SimulatedLensView.swift in Sources */,
+				AAAA00000000000000000F51 /* LensArt.swift in Sources */,
 				AAAA00000000000000000033 /* SettingsView.swift in Sources */,
 				AAAA00000000000000000817 /* HermesDesign.swift in Sources */,
 				AAAA00000000000000000A63 /* EmoDrink/ChangeGate.swift in Sources */,
@@ -433,6 +440,7 @@
 				AAAA00000000000000000F21 /* VendingMachine.swift in Sources */,
 				AAAA00000000000000000F33 /* ShowcaseStrings.swift in Sources */,
 				AAAA00000000000000000F37 /* ShowcaseDirector.swift in Sources */,
+				AAAA00000000000000000F53 /* LensRenderer.swift in Sources */,
 				AAAA00000000000000000F31 /* GuestProfile.swift in Sources */,
 				AAAA00000000000000000E03 /* EmoDrink/DrinkCatalog.swift in Sources */,
 				AAAA00000000000000000E07 /* EmoDrink/DrinkRecommender.swift in Sources */,
