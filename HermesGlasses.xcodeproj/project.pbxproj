@@ -10,6 +10,7 @@
 		AAAA00000000000000000001 /* HermesGlassesApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000101 /* HermesGlassesApp.swift */; };
 		AAAA00000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000102 /* ContentView.swift */; };
 		AAAA00000000000000000E34 /* GlassesBasicsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E35 /* GlassesBasicsView.swift */; };
+		AAAA00000000000000000A82 /* ShowcaseSpikesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000A83 /* ShowcaseSpikesView.swift */; };
 		AAAA00000000000000000003 /* RegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000103 /* RegistrationView.swift */; };
 		AAAA00000000000000000004 /* WearablesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000104 /* WearablesViewModel.swift */; };
 		AAAA00000000000000000E36 /* GlassesBasicsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E37 /* GlassesBasicsViewModel.swift */; };
@@ -24,6 +25,7 @@
 		AAAA00000000000000000014 /* HermesDisplayScreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000117 /* HermesDisplayScreens.swift */; };
 		AAAA00000000000000000015 /* HermesDisplayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000118 /* HermesDisplayManager.swift */; };
 		AAAA00000000000000000E38 /* GlassesLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E39 /* GlassesLink.swift */; };
+		AAAA00000000000000000A80 /* ShowcaseSpikes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000A81 /* ShowcaseSpikes.swift */; };
 		AAAA00000000000000000016 /* DeviceContextFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000119 /* DeviceContextFormatter.swift */; };
 		AAAA00000000000000000017 /* DeviceContextProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000120 /* DeviceContextProvider.swift */; };
 		AAAA00000000000000000018 /* Providers/AIProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000121 /* Providers/AIProvider.swift */; };
@@ -37,6 +39,8 @@
 		AAAA00000000000000000802 /* MWDATCamera in Frameworks */ = {isa = PBXBuildFile; productRef = AAAA00000000000000000702 /* MWDATCamera */; };
 		AAAA00000000000000000803 /* MWDATMockDevice in Frameworks */ = {isa = PBXBuildFile; productRef = AAAA00000000000000000703 /* MWDATMockDevice */; };
 		AAAA00000000000000000804 /* MWDATDisplay in Frameworks */ = {isa = PBXBuildFile; productRef = AAAA00000000000000000704 /* MWDATDisplay */; };
+		AAAA00000000000000000805 /* MWDATSpeech in Frameworks */ = {isa = PBXBuildFile; productRef = AAAA00000000000000000705 /* MWDATSpeech */; };
+		AAAA00000000000000000806 /* MWDATInputs in Frameworks */ = {isa = PBXBuildFile; productRef = AAAA00000000000000000706 /* MWDATInputs */; };
 		AAAA00000000000000000817 /* HermesDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000818 /* HermesDesign.swift */; };
 		AAAA00000000000000000821 /* LensContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000822 /* LensContent.swift */; };
 		AAAA00000000000000000823 /* VisionSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000824 /* VisionSource.swift */; };
@@ -88,6 +92,7 @@
 		AAAA00000000000000000101 /* HermesGlassesApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HermesGlassesApp.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000102 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E35 /* GlassesBasicsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassesBasicsView.swift; sourceTree = "<group>"; };
+		AAAA00000000000000000A83 /* ShowcaseSpikesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowcaseSpikesView.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000103 /* RegistrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegistrationView.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000104 /* WearablesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WearablesViewModel.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E37 /* GlassesBasicsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassesBasicsViewModel.swift; sourceTree = "<group>"; };
@@ -105,6 +110,7 @@
 		AAAA00000000000000000117 /* HermesDisplayScreens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HermesDisplayScreens.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000118 /* HermesDisplayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HermesDisplayManager.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E39 /* GlassesLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassesLink.swift; sourceTree = "<group>"; };
+		AAAA00000000000000000A81 /* ShowcaseSpikes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowcaseSpikes.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000119 /* DeviceContextFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceContextFormatter.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000120 /* DeviceContextProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceContextProvider.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000121 /* Providers/AIProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Providers/AIProvider.swift; sourceTree = "<group>"; };
@@ -158,6 +164,8 @@
 				AAAA00000000000000000802 /* MWDATCamera in Frameworks */,
 				AAAA00000000000000000803 /* MWDATMockDevice in Frameworks */,
 				AAAA00000000000000000804 /* MWDATDisplay in Frameworks */,
+				AAAA00000000000000000805 /* MWDATSpeech in Frameworks */,
+				AAAA00000000000000000806 /* MWDATInputs in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -202,6 +210,7 @@
 			children = (
 				AAAA00000000000000000102 /* ContentView.swift */,
 				AAAA00000000000000000E35 /* GlassesBasicsView.swift */,
+				AAAA00000000000000000A83 /* ShowcaseSpikesView.swift */,
 				AAAA00000000000000000103 /* RegistrationView.swift */,
 				AAAA00000000000000000136 /* SettingsView.swift */,
 				AAAA00000000000000000818 /* HermesDesign.swift */,
@@ -236,6 +245,7 @@
 				AAAA00000000000000000117 /* HermesDisplayScreens.swift */,
 				AAAA00000000000000000118 /* HermesDisplayManager.swift */,
 				AAAA00000000000000000E39 /* GlassesLink.swift */,
+				AAAA00000000000000000A81 /* ShowcaseSpikes.swift */,
 				AAAA00000000000000000119 /* DeviceContextFormatter.swift */,
 				AAAA00000000000000000120 /* DeviceContextProvider.swift */,
 				AAAA00000000000000000121 /* Providers/AIProvider.swift */,
@@ -302,6 +312,8 @@
 				AAAA00000000000000000702 /* MWDATCamera */,
 				AAAA00000000000000000703 /* MWDATMockDevice */,
 				AAAA00000000000000000704 /* MWDATDisplay */,
+				AAAA00000000000000000705 /* MWDATSpeech */,
+				AAAA00000000000000000706 /* MWDATInputs */,
 			);
 			productName = HermesGlasses;
 			productReference = AAAA00000000000000000111 /* EmoDrink Glasses.app */;
@@ -364,6 +376,7 @@
 				AAAA00000000000000000001 /* HermesGlassesApp.swift in Sources */,
 				AAAA00000000000000000002 /* ContentView.swift in Sources */,
 				AAAA00000000000000000E34 /* GlassesBasicsView.swift in Sources */,
+				AAAA00000000000000000A82 /* ShowcaseSpikesView.swift in Sources */,
 				AAAA00000000000000000003 /* RegistrationView.swift in Sources */,
 				AAAA00000000000000000004 /* WearablesViewModel.swift in Sources */,
 				AAAA00000000000000000E36 /* GlassesBasicsViewModel.swift in Sources */,
@@ -376,6 +389,7 @@
 				AAAA00000000000000000014 /* HermesDisplayScreens.swift in Sources */,
 				AAAA00000000000000000015 /* HermesDisplayManager.swift in Sources */,
 				AAAA00000000000000000E38 /* GlassesLink.swift in Sources */,
+				AAAA00000000000000000A80 /* ShowcaseSpikes.swift in Sources */,
 				AAAA00000000000000000016 /* DeviceContextFormatter.swift in Sources */,
 				AAAA00000000000000000017 /* DeviceContextProvider.swift in Sources */,
 				AAAA00000000000000000018 /* Providers/AIProvider.swift in Sources */,
@@ -678,6 +692,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AAAA00000000000000000601 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
 			productName = MWDATDisplay;
+		};
+		AAAA00000000000000000705 /* MWDATSpeech */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AAAA00000000000000000601 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATSpeech;
+		};
+		AAAA00000000000000000706 /* MWDATInputs */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AAAA00000000000000000601 /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATInputs;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

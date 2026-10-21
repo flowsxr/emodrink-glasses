@@ -164,6 +164,13 @@ private struct GlassesPage: View {
                     HermesRow("Test panel", icon: "wrench.and.screwdriver", mutedIcon: true, value: "Display test")
                 }
                 .buttonStyle(.plain)
+                HermesDivider()
+                NavigationLink {
+                    ShowcaseSpikesView(link: basicsVM.link)
+                } label: {
+                    HermesRow("Showcase spikes", icon: "scope", mutedIcon: true, value: "Video, speech, inputs")
+                }
+                .buttonStyle(.plain)
             }
         }
         .fullScreenCover(isPresented: $showBasics) {

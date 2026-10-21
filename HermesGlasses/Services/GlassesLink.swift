@@ -35,6 +35,8 @@ import Foundation
 import MWDATCamera
 import MWDATCore
 import MWDATDisplay
+import MWDATInputs
+import MWDATSpeech
 import Observation
 import UIKit
 
@@ -192,6 +194,11 @@ final class GlassesLink {
     /// Add the display as soon as the session reaches `.started`.
     @ObservationIgnored private var wantDisplay = false
 
+    @ObservationIgnored private var speech: Speech?
+    @ObservationIgnored private let speechTokenBag = ListenerTokenBag()
+    @ObservationIgnored private var inputs: Inputs?
+    @ObservationIgnored private var inputsTask: Task<Void, Never>?
+
     @ObservationIgnored private var camera: MWDATCamera.Camera?
     @ObservationIgnored private let streamTokenBag = ListenerTokenBag()
     /// Add the camera as soon as the session reaches `.started`.
@@ -218,7 +225,7 @@ final class GlassesLink {
 
     private struct PendingSend {
         let label: String
-        let build: () -> FlexBox
+        let build: () -> any DisplayableView
         let continuation: CheckedContinuation<Bool, Never>
     }
 
@@ -543,12 +550,45 @@ final class GlassesLink {
                 add("send superseded: \"\(older.label)\" replaced by \"\(label)\"")
                 older.continuation.resume(returning: false)
             }
+            pendingSend = PendingSend(label: label, build: { build() }, continuation: continuation)
+            add("send queued: \"\(label)\" waits for display .started")
+            setDisplayIssue(nil)
+            startDisplayReadinessTimeout()
+            attachDisplayIfNeeded()
+        }
+    }
+
+    /// Showcase spike: play a video on the lens. Same readiness and pending
+    /// path as `send(label:_:)`; `uri` is a `file://` or `http://` URL of an
+    /// MP4. Returns true when the SDK accepted the send.
+    @discardableResult
+    func sendVideo(uri: String, label: String) async -> Bool {
+        let build: () -> any DisplayableView = { VideoPlayer(provider: .uri(uri), codec: .mp4) }
+        if let display, displayState == .started {
+            return await doSend(build(), label: label, on: display)
+        }
+        return await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+            if let older = pendingSend {
+                add("send superseded: \"\(older.label)\" replaced by \"\(label)\"")
+                older.continuation.resume(returning: false)
+            }
             pendingSend = PendingSend(label: label, build: build, continuation: continuation)
             add("send queued: \"\(label)\" waits for display .started")
             setDisplayIssue(nil)
             startDisplayReadinessTimeout()
             attachDisplayIfNeeded()
         }
+    }
+
+    /// Showcase spike: stop the video the lens is playing.
+    func stopVideo() async {
+        guard let display, displayState == .started else {
+            add("stopVideo ignored: display is \(displayStateText)")
+            return
+        }
+        add("display.sendVideoStop()")
+        await display.sendVideoStop()
+        add("sendVideoStop returned")
     }
 
     /// Test 1's attach step: reuse the attached display, add it to a
@@ -650,7 +690,7 @@ final class GlassesLink {
         }
     }
 
-    private func doSend(_ view: FlexBox, label: String, on capability: Display) async -> Bool {
+    private func doSend(_ view: some DisplayableView, label: String, on capability: Display) async -> Bool {
         add("display.send(\(label))")
         do {
             try await capability.send(view)
@@ -899,6 +939,90 @@ final class GlassesLink {
         for onStop in stopped { onStop() }
     }
 
+    // MARK: - Glasses speech and inputs (showcase spikes)
+
+    /// Showcase spike: the glasses' own speech recognition. Needs a started
+    /// session (`ensureSession()` first). `onText` gets each transcript and
+    /// whether it is final. Returns false when it could not start.
+    @discardableResult
+    func startGlassesSpeech(onText: @escaping @MainActor (String, Bool) -> Void) -> Bool {
+        guard let session = deviceSession, session.state == .started else {
+            add("startGlassesSpeech: no started session (\(sessionStateText))")
+            return false
+        }
+        stopGlassesSpeech()
+        do {
+            guard let capability = try session.addSpeech() else {
+                add("addSpeech returned nil")
+                return false
+            }
+            speech = capability
+            capability.transcriptionPublisher.listen { result in
+                let text = result.text, isFinal = result.isFinal
+                Task { @MainActor in onText(text, isFinal) }
+            }.store(in: speechTokenBag)
+            capability.statePublisher.listen { [weak self] state in
+                Task { @MainActor in self?.add("speech state: \(state.description)") }
+            }.store(in: speechTokenBag)
+            capability.errorPublisher.listen { [weak self] error in
+                Task { @MainActor in self?.add("speech ERROR: \(error.localizedDescription) [\(error)]") }
+            }.store(in: speechTokenBag)
+            add("addSpeech OK; speech.start()")
+            capability.start()
+            return true
+        } catch {
+            add("addSpeech FAILED: \(error.localizedDescription) [\(error)]")
+            return false
+        }
+    }
+
+    func stopGlassesSpeech() {
+        guard let capability = speech else { return }
+        add("speech.stop()")
+        speechTokenBag.clear()
+        capability.stop()
+        speech = nil
+        try? deviceSession?.removeSpeech()
+    }
+
+    /// Showcase spike: a debug description of every glasses input event
+    /// (swipes, taps, buttons). Replaces an earlier handler.
+    func observeGlassesInputs(_ handler: @escaping @MainActor (String) -> Void) {
+        guard let session = deviceSession, session.state == .started else {
+            add("observeGlassesInputs: no started session (\(sessionStateText))")
+            return
+        }
+        stopObservingGlassesInputs()
+        do {
+            guard let capability = try session.addInputs() else {
+                add("addInputs returned nil")
+                return
+            }
+            inputs = capability
+            add("addInputs OK; listening for events")
+            let events = capability.events
+            inputsTask = Task { [weak self] in
+                for await event in events {
+                    guard !Task.isCancelled else { return }
+                    let text = String(describing: event)
+                    self?.add("input: \(text)")
+                    handler(text)
+                }
+            }
+        } catch {
+            add("addInputs FAILED: \(error.localizedDescription) [\(error)]")
+        }
+    }
+
+    func stopObservingGlassesInputs() {
+        guard inputs != nil else { return }
+        inputsTask?.cancel()
+        inputsTask = nil
+        inputs = nil
+        add("inputs: stopped listening")
+        try? deviceSession?.removeInputs()
+    }
+
     // MARK: - Reset
 
     func reset() {
@@ -944,6 +1068,12 @@ final class GlassesLink {
         display = nil
         if hadDisplay, displayIssue == nil { displayIssue = "Display stopped" }
         setDisplayState(nil)
+
+        speechTokenBag.clear()
+        speech = nil
+        inputsTask?.cancel()
+        inputsTask = nil
+        inputs = nil
 
         streamTokenBag.clear()
         camera = nil
