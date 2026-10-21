@@ -38,6 +38,41 @@ let allAliases = catalog.drinks.flatMap { d in d.aliases.map { $0.lowercased() }
 expect(Set(allAliases).count == allAliases.count, "no alias is shared by two drinks")
 expect(catalog.drinks.dropFirst(12).allSatisfy { (2...4).contains($0.aliases.count) }, "new drinks carry 2-4 aliases")
 
+// Alias hygiene: a key that is inside another drink's key is only allowed for
+// intentional flagship brand words, and the siblings must then carry longer keys.
+func norm(_ s: String) -> String {
+    s.precomposedStringWithCompatibilityMapping.lowercased().filter { !$0.isWhitespace }
+}
+let brandWords = ["calpis", "カルピス", "wilkinson", "ウィルキンソン", "mitsuya", "三ツ矢", "juroku", "十六茶", "sixteentea", "dodekamin", "ドデカミン", "おいしい水", "oishiiwater"].map(norm)
+let fullNamePrefixes = ["mitsuyacider", "三ツ矢サイダー", "wilkinsontansan", "ウィルキンソンタンサン", "dodekamin", "ドデカミン", "calpiswater", "カルピスウォーター", "asahijuroku-cha", "アサヒ十六茶", "asahioishiimizutennensui", "アサヒおいしい水天然水", "wondamorningshot", "ワンダモーニングショット"].map(norm)
+let allowedInside = Set(brandWords + fullNamePrefixes)
+func keys(_ d: Drink) -> [String] { ([d.name, d.nameJa] + d.aliases).map(norm) }
+var insideViolations: [String] = []
+for a in catalog.drinks {
+    for k in keys(a) where k.count >= 2 && !allowedInside.contains(k) {
+        for b in catalog.drinks where b.id != a.id {
+            if keys(b).contains(where: { $0 != k && $0.contains(k) }) { insideViolations.append("\(a.id):\(k) inside \(b.id)") }
+        }
+    }
+}
+expect(insideViolations.isEmpty, "no alias or name hides inside another drink's key unless it is a flagship brand word \(insideViolations)")
+var siblingViolations: [String] = []
+for w in brandWords {
+    for b in catalog.drinks {
+        let ownsBare = b.aliases.map(norm).contains(w) || norm(b.name) == w || norm(b.nameJa) == w
+        let mentions = keys(b).contains { $0.contains(w) }
+        if mentions && !ownsBare && !b.aliases.map(norm).contains(where: { $0.contains(w) && $0.count > w.count }) {
+            siblingViolations.append("\(b.id) lacks a longer alias for \(w)")
+        }
+    }
+}
+expect(siblingViolations.isEmpty, "every sibling of a flagship brand word has a longer alias \(siblingViolations)")
+let everyKey = catalog.drinks.flatMap { Array(Set(keys($0))) }
+expect(Set(everyKey).count == everyKey.count, "no key is shared by two drinks")
+let genericAliases = ["energydrink", "sparklingwater", "barleytea", "greentea", "tonic", "sportsdrink"]
+expect(catalog.drinks.allSatisfy { Set($0.aliases.map(norm)).isDisjoint(with: genericAliases) }, "no generic category aliases")
+expect(catalog.drinks.allSatisfy { $0.colorHex == nil || $0.colorHex == $0.functions.first.map { f in Drink(id: "x", name: "x", nameJa: "x", kind: "x", functions: [f], caffeineMg: 0, sugar: .none, served: .cold).displayColorHex } }, "colour matches the first function")
+
 // Validation.
 let empty = "{\"drinks\":[]}".data(using: .utf8)!
 expect((try? DrinkCatalog.decode(empty)) == nil, "empty catalogue is rejected")
