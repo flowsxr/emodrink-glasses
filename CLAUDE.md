@@ -20,6 +20,13 @@ mode.
   state), takes provider, model and key from Info.plist `EmoDrinkBundledAI`
   (fed by the gitignored `Config/Secrets.xcconfig`), and never overwrites a
   user key: the Keychain is written only when that provider has none.
+- **EmoDrink is its own app: `com.flowsxr.emodrink`, scheme `emodrink://`**
+  (team FLOWXR `3U4384584Z`). It no longer shares Hermes's bundle id, so its
+  `META_APP_ID` must come from the EmoDrink project in the Meta Wearables
+  Developer Center, not from Hermes's. `tools/release.sh <build>` archives
+  and uploads to TestFlight; the steps that can only be done by hand are in
+  `docs/RELEASE.md`. The Wi-Fi entitlements are NOT leftovers: MWDATCore
+  calls NEHotspotConfiguration.
 - **TTS is Gemini first, on-device fallback.** `HermesSpeechSynthesizer`
   fetches each spoken line from Gemini text-to-speech (`CloudSpeech`,
   length-aware timeout 3 to 10 s, voices Kore for ja and Aoede for en) and plays it with

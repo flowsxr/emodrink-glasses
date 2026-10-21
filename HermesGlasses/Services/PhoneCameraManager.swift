@@ -44,7 +44,7 @@ enum PhoneCameraError: LocalizedError {
 
 final class PhoneCameraManager: NSObject, @unchecked Sendable, VisionSource {
     private let logger = Logger(
-        subsystem: "com.flowsxr.hermesglasses", category: "phone-camera"
+        subsystem: "com.flowsxr.emodrink", category: "phone-camera"
     )
 
     var onDebug: ((String) -> Void)?
@@ -57,7 +57,7 @@ final class PhoneCameraManager: NSObject, @unchecked Sendable, VisionSource {
     private let session = AVCaptureSession()
     /// Frames are delivered here, off the main thread.
     private let outputQueue = DispatchQueue(
-        label: "com.flowsxr.hermesglasses.phone-camera"
+        label: "com.flowsxr.emodrink.phone-camera"
     )
 
     private struct State {

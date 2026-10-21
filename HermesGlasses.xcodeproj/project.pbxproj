@@ -16,6 +16,7 @@
 		AAAA00000000000000000005 /* HermesSessionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000105 /* HermesSessionViewModel.swift */; };
 		AAAA00000000000000000006 /* HermesAudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000106 /* HermesAudioManager.swift */; };
 		AAAA00000000000000000008 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000108 /* Assets.xcassets */; };
+		BBBB00000000000000000001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = BBBB00000000000000000002 /* PrivacyInfo.xcprivacy */; };
 		AAAA00000000000000000010 /* HermesSpeechRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000113 /* HermesSpeechRecognizer.swift */; };
 		AAAA00000000000000000011 /* HermesSpeechSynthesizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000114 /* HermesSpeechSynthesizer.swift */; };
 		AAAA00000000000000000012 /* DirectClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000115 /* DirectClient.swift */; };
@@ -93,6 +94,7 @@
 		AAAA00000000000000000105 /* HermesSessionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HermesSessionViewModel.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000106 /* HermesAudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HermesAudioManager.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000108 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		BBBB00000000000000000002 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AAAA00000000000000000109 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AAAA00000000000000000110 /* HermesGlasses.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HermesGlasses.entitlements; sourceTree = "<group>"; };
 		AAAA00000000000000000111 /* EmoDrink Glasses.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "EmoDrink Glasses.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -187,6 +189,7 @@
 				AAAA0000000000000000003 /* ViewModels */,
 				AAAA0000000000000000004 /* Services */,
 				AAAA00000000000000000108 /* Assets.xcassets */,
+				BBBB00000000000000000002 /* PrivacyInfo.xcprivacy */,
 				AAAA00000000000000000E06 /* Resources/EmoDrink/asahi-drinks.json */,
 				AAAA00000000000000000109 /* Info.plist */,
 				AAAA00000000000000000110 /* HermesGlasses.entitlements */,
@@ -346,6 +349,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AAAA00000000000000000008 /* Assets.xcassets in Resources */,
+				BBBB00000000000000000001 /* PrivacyInfo.xcprivacy in Resources */,
 				AAAA00000000000000000E05 /* Resources/EmoDrink/asahi-drinks.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -447,8 +451,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.4;
-				PRODUCT_BUNDLE_IDENTIFIER = com.flowsxr.hermesglasses;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.flowsxr.emodrink;
 				PRODUCT_NAME = "EmoDrink Glasses";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -485,8 +489,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.4;
-				PRODUCT_BUNDLE_IDENTIFIER = com.flowsxr.hermesglasses;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.flowsxr.emodrink;
 				PRODUCT_NAME = "EmoDrink Glasses";
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_EMIT_LOC_STRINGS = YES;

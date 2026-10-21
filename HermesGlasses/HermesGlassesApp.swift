@@ -15,7 +15,7 @@ import os
 import MWDATMockDevice
 #endif
 
-private let logger = Logger(subsystem: "com.flowsxr.hermesglasses", category: "startup")
+private let logger = Logger(subsystem: "com.flowsxr.emodrink", category: "startup")
 
 @main
 struct HermesGlassesApp: App {

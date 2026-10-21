@@ -20,7 +20,7 @@ final class DeviceContextProvider: NSObject {
     static let preciseKey = "context_precise_location"
 
     private let logger = Logger(
-        subsystem: "com.flowsxr.hermesglasses", category: "context"
+        subsystem: "com.flowsxr.emodrink", category: "context"
     )
 
     var isEnabled: Bool {

@@ -11,7 +11,7 @@ import os
 
 final class DirectClient: @unchecked Sendable {
     private static let logger = Logger(
-        subsystem: "com.flowsxr.hermesglasses", category: "direct"
+        subsystem: "com.flowsxr.emodrink", category: "direct"
     )
 
     // MARK: - Provider selection (UserDefaults)

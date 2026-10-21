@@ -36,7 +36,7 @@ final class HermesSpeechRecognizer: NSObject, @unchecked Sendable {
 
     // MARK: - Private
 
-    private let logger = Logger(subsystem: "com.flowsxr.hermesglasses", category: "speech")
+    private let logger = Logger(subsystem: "com.flowsxr.emodrink", category: "speech")
     /// Replaced between sessions by `setLocale`; never while running.
     private var recognizer: SFSpeechRecognizer? = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
 

@@ -29,8 +29,9 @@ lives on in the Hermes Glasses repo.
 
 ## First ten minutes
 
-1. **Install.** Build from Xcode onto the iPhone. The bundle id
-   (`com.flowsxr.hermesglasses`) must be the one registered with the Meta
+1. **Install.** Build from Xcode onto the iPhone, or install the TestFlight
+   build (see [docs/RELEASE.md](docs/RELEASE.md)). The bundle id
+   (`com.flowsxr.emodrink`) must be the one registered with the Meta
    Wearables Developer Center, and `Config/Secrets.xcconfig` must carry the
    Meta app id and the assistant key (copy `Config/Secrets.example.xcconfig`).
 2. **Glasses.** In the Meta AI app (v272 or later, glasses firmware v125 or
@@ -150,12 +151,12 @@ three sample profiles under "Use sample data" work offline.
   Phone mode (the iPhone camera as the eye) works without it.
 
 Settings › Drinks shows the feed URL, sample data and the catalogue; the
-home screen shows today's numbers. The build uses the bundle id
-`com.flowsxr.hermesglasses`, because the Meta Wearables Developer Center
-ties the app id to that bundle id; the glasses only link to a bundle id
-that is registered there. To ship under another id, register it in the
-Developer Center first and change `PRODUCT_BUNDLE_IDENTIFIER` in the
-project. EmoDrink therefore replaces Hermes Glasses on a phone that has it.
+home screen shows today's numbers. EmoDrink is its own app,
+`com.flowsxr.emodrink` with the URL scheme `emodrink://`, so it installs
+next to Hermes Glasses. The Meta Wearables Developer Center ties the app id
+to that bundle id, and the glasses link only to a bundle id registered
+there. Releasing, TestFlight and getting it onto someone else's glasses are
+covered in [docs/RELEASE.md](docs/RELEASE.md).
 
 ## Design
 

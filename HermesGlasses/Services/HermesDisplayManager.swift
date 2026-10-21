@@ -24,7 +24,7 @@ enum DisplayHUDStatus: Equatable {
 @MainActor
 final class HermesDisplayManager {
     private let logger = Logger(
-        subsystem: "com.flowsxr.hermesglasses", category: "display"
+        subsystem: "com.flowsxr.emodrink", category: "display"
     )
 
     private(set) var status: DisplayHUDStatus = .off {
