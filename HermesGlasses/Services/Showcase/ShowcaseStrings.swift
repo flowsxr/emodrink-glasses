@@ -42,7 +42,7 @@ struct ShowcaseStrings {
     }
     var confirmLine: String { ja ? "いい選択ですね。ごゆっくりどうぞ。" : "Nice choice. Enjoy it." }
     var fallbackConversation: String {
-        ja ? "少し考えますね。今はカードのおすすめをどうぞ。" : "Let me think about that, the card shows my pick for now."
+        ja ? "少し考えますね。今はカードのおすすめをどうぞ。" : "Let me think about that. The card shows my pick for now."
     }
 
     // MARK: Spoken step lines
@@ -51,7 +51,20 @@ struct ShowcaseStrings {
     var spokenMorning: String { ja ? "今朝の体のようすを見てみましょう。" : "Here is how your morning looks." }
     var spokenScan: String { ja ? "この自販機のラインナップを見ていますね。" : "Looking at what this machine has." }
     func spokenReveal(drink: String, reason: String) -> String {
-        ja ? "\(reason)なので、\(drink)はいかがでしょう。" : "\(reason), so how about \(drink)?"
+        ja ? "\(Self.spokenReasonJa(reason))、\(drink)はいかがでしょう。" : "\(reason), so how about \(drink)?"
+    }
+
+    /// Japanese label -> a phrase that joins with ので; unknown labels pass through.
+    static func spokenReasonJa(_ label: String) -> String {
+        switch label {
+        case "睡眠不足": return "睡眠が足りていないので"
+        case "HRV低め": return "HRVが低めなので"
+        case "心拍高め": return "心拍が高めなので"
+        case "張りつめ気味": return "張りつめ気味なので"
+        case "よく眠れた": return "よく眠れたので"
+        case "よく歩いた": return "よく歩いたので"
+        default: return label + "ので"
+        }
     }
 
     // MARK: Morning summary, one line per recovery / arousal pair
@@ -59,12 +72,12 @@ struct ShowcaseStrings {
     func summary(for state: BodyState) -> String {
         switch (state.recovery, state.arousal) {
         case (.low, .low): return ja ? "ゆっくりな朝。やさしく目覚めましょう。" : "A slow start. Ease into the day."
-        case (.low, .mid): return ja ? "少し眠そうな朝。ひと息つきましょう。" : "A little sleepy. Time for a lift."
+        case (.low, .mid): return ja ? "少し眠そうな朝。一杯で、すっきりいきましょう。" : "A little sleepy. Time for a lift."
         case (.low, .high): return ja ? "眠いのに落ち着かない朝。まず深呼吸を。" : "Tired but wired. Slow down first."
         case (.mid, .low): return ja ? "穏やかな朝。のんびりいきましょう。" : "A calm morning. No rush."
         case (.mid, .mid): return ja ? "ほどよい朝。さっぱりしたいですね。" : "A steady morning. Something fresh."
         case (.mid, .high): return ja ? "少し張りつめた朝。肩の力を抜いて。" : "A bit keyed up. Soften the edges."
-        case (.high, .low): return ja ? "ぐっすり眠れた朝。気持ちよく始めましょう。" : "Well rested and easy."
+        case (.high, .low): return ja ? "ぐっすり眠れた朝。気持ちよく始めましょう。" : "Well rested. A gentle start."
         case (.high, .mid): return ja ? "よく眠れた朝。さわやかにいきましょう。" : "Well rested. Keep it bright."
         case (.high, .high): return ja ? "元気いっぱいの朝。水分を忘れずに。" : "Full of energy. Keep sipping."
         }
@@ -86,8 +99,8 @@ struct ShowcaseStrings {
 
     var shortSleepLabel: String { ja ? "睡眠不足" : "Short sleep" }
     var hrvLowLabel: String { ja ? "HRV低め" : "HRV low" }
-    var heartRateUpLabel: String { ja ? "心拍高め" : "Heart rate up" }
-    var stressedLabel: String { ja ? "ストレス" : "Stressed" }
+    var heartRateUpLabel: String { ja ? "心拍高め" : "Pulse up" }
+    var stressedLabel: String { ja ? "張りつめ気味" : "Tense" }
     var wellRestedLabel: String { ja ? "よく眠れた" : "Well rested" }
     var activeMorningLabel: String { ja ? "よく歩いた" : "Active morning" }
 

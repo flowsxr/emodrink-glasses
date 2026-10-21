@@ -65,14 +65,20 @@ for lang in Language.allCases {
     let str = ShowcaseStrings(language: lang)
     expect(allSnaps.allSatisfy { str.reasons(for: $0).count <= 2 }, "at most two reasons \(lang)")
     let labels = allSnaps.flatMap { str.reasons(for: $0).map(\.label) }
-    // "Heart rate up" is the brief verbatim three-word label.
-    let limit: (String) -> Bool = lang == .en ? { $0.split(separator: " ").count <= 3 } : { $0.count <= 6 }
+    let limit: (String) -> Bool = lang == .en ? { $0.split(separator: " ").count <= 2 } : { $0.count <= 6 }
     expect(labels.allSatisfy(limit), "reason labels short enough \(lang)")
 }
 let stressedReasons = ShowcaseStrings(language: .en).reasons(for: GuestProfile.preset(.stressed).snapshot(date: d)).map(\.label)
-expect(stressedReasons.contains("Stressed") || stressedReasons.contains("Heart rate up"), "stressed preset shows a stress or heart reason")
+expect(stressedReasons.contains("Tense") || stressedReasons.contains("Pulse up"), "stressed preset shows a stress or heart reason")
 expect(ShowcaseStrings(language: .en).reasons(for: GuestProfile.preset(.rested).snapshot(date: d)).map(\.label).first == "Well rested", "rested shows Well rested")
 expect(ShowcaseStrings(language: .en).reasons(for: GuestProfile.preset(.postWorkout).snapshot(date: d)).map(\.label).contains("Active morning"), "post-workout shows Active morning")
+
+// Spoken reveal grammar
+let jaStr = ShowcaseStrings(language: .ja)
+let jaLabels = [jaStr.shortSleepLabel, jaStr.hrvLowLabel, jaStr.heartRateUpLabel, jaStr.stressedLabel, jaStr.wellRestedLabel, jaStr.activeMorningLabel]
+expect(jaLabels.allSatisfy { !jaStr.spokenReveal(drink: "ドリンク", reason: $0).contains("たなので") }, "no たなので in any Japanese spoken reveal")
+expect(jaLabels.allSatisfy { jaStr.spokenReveal(drink: "ドリンク", reason: $0).contains("ので、") }, "Japanese reveal joins with ので")
+expect(ShowcaseStrings(language: .en).summary(for: BodyState(recovery: .low, arousal: .mid)).contains("lift") && jaStr.summary(for: BodyState(recovery: .low, arousal: .mid)).contains("すっきり"), "default-path summary agrees across languages")
 
 // Japanese run has no English
 func asciiLetters(_ s: String) -> Bool {
