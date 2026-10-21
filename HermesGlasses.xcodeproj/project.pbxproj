@@ -52,6 +52,8 @@
 		AAAA00000000000000000841 /* ChoiceDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000842 /* ChoiceDetector.swift */; };
 		AAAA00000000000000000A63 /* EmoDrink/ChangeGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000A64 /* EmoDrink/ChangeGate.swift */; };
 		AAAA00000000000000000E01 /* EmoDrink/PhysiologySnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E02 /* EmoDrink/PhysiologySnapshot.swift */; };
+		AAAA00000000000000000F23 /* DrinkNameMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F24 /* DrinkNameMatcher.swift */; };
+		AAAA00000000000000000F21 /* VendingMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F22 /* VendingMachine.swift */; };
 		AAAA00000000000000000E03 /* EmoDrink/DrinkCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E04 /* EmoDrink/DrinkCatalog.swift */; };
 		AAAA00000000000000000E05 /* Resources/EmoDrink/asahi-drinks.json in Resources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E06 /* Resources/EmoDrink/asahi-drinks.json */; };
 		AAAA00000000000000000E07 /* EmoDrink/DrinkRecommender.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E08 /* EmoDrink/DrinkRecommender.swift */; };
@@ -132,6 +134,8 @@
 		AAAA00000000000000000842 /* ChoiceDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChoiceDetector.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000A64 /* EmoDrink/ChangeGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/ChangeGate.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E02 /* EmoDrink/PhysiologySnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/PhysiologySnapshot.swift; sourceTree = "<group>"; };
+		AAAA00000000000000000F24 /* DrinkNameMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/DrinkNameMatcher.swift; sourceTree = "<group>"; };
+		AAAA00000000000000000F22 /* VendingMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/VendingMachine.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E04 /* EmoDrink/DrinkCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/DrinkCatalog.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E06 /* Resources/EmoDrink/asahi-drinks.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "Resources/EmoDrink/asahi-drinks.json"; sourceTree = "<group>"; };
 		AAAA00000000000000000E08 /* EmoDrink/DrinkRecommender.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/DrinkRecommender.swift; sourceTree = "<group>"; };
@@ -262,6 +266,8 @@
 				AAAA00000000000000000828 /* PermissionsCoordinator.swift */,
 				AAAA00000000000000000A64 /* EmoDrink/ChangeGate.swift */,
 				AAAA00000000000000000E02 /* EmoDrink/PhysiologySnapshot.swift */,
+				AAAA00000000000000000F24 /* DrinkNameMatcher.swift */,
+				AAAA00000000000000000F22 /* VendingMachine.swift */,
 				AAAA00000000000000000E04 /* EmoDrink/DrinkCatalog.swift */,
 				AAAA00000000000000000E08 /* EmoDrink/DrinkRecommender.swift */,
 				AAAA00000000000000000E0A /* EmoDrink/PhysiologySource.swift */,
@@ -414,6 +420,8 @@
 				AAAA00000000000000000817 /* HermesDesign.swift in Sources */,
 				AAAA00000000000000000A63 /* EmoDrink/ChangeGate.swift in Sources */,
 				AAAA00000000000000000E01 /* EmoDrink/PhysiologySnapshot.swift in Sources */,
+				AAAA00000000000000000F23 /* DrinkNameMatcher.swift in Sources */,
+				AAAA00000000000000000F21 /* VendingMachine.swift in Sources */,
 				AAAA00000000000000000E03 /* EmoDrink/DrinkCatalog.swift in Sources */,
 				AAAA00000000000000000E07 /* EmoDrink/DrinkRecommender.swift in Sources */,
 				AAAA00000000000000000E09 /* EmoDrink/PhysiologySource.swift in Sources */,
