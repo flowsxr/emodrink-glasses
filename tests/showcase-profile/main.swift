@@ -95,5 +95,10 @@ let enAll = ShowcaseStrings(language: .en).all
 expect(enAll.count == jaAll.count, "same string count in both languages")
 expect(enAll.allSatisfy { !$0.isEmpty }, "no empty en strings")
 
+// The default guest's Why card carries two reasons, not one.
+let assumedSnap = GuestProfile.preset(.assumed).snapshot(date: d)
+expect(ShowcaseStrings(language: .en).reasons(for: assumedSnap).count == 2, "assumed preset yields 2 reasons (en)")
+expect(ShowcaseStrings(language: .ja).reasons(for: assumedSnap).count == 2, "assumed preset yields 2 reasons (ja)")
+
 print(failures == 0 ? "ALL PASS" : "\(failures) FAILED")
 exit(failures == 0 ? 0 : 1)

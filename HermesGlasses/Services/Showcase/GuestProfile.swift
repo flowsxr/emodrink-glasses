@@ -50,7 +50,7 @@ enum GuestProfile: Equatable {
     }
 
     // Preset table (recovery / arousal in the last column):
-    //   assumed     5.6 h  58  HRV 50  HR 60  1200 steps  stress 40  low / mid
+    //   assumed     5.6 h  58  HRV 40  HR 60  1200 steps  stress 40  low / mid
     //   rested      7.9 h  86  HRV 58  HR 55  2000 steps  stress 20  high / mid
     //   shortSleep  4.8 h  41  HRV 38  HR 61   900 steps  stress 45  low / mid
     //   stressed    6.4 h  66  HRV 44  HR 64  1500 steps  stress 74  mid / high
@@ -58,7 +58,7 @@ enum GuestProfile: Equatable {
     private static func snapshot(for preset: GuestPreset, date: String) -> PhysiologySnapshot {
         switch preset {
         case .assumed:
-            return make(date: date, source: "assumed morning", hours: 5.6, score: 58, hrv: 50, hr: 60, steps: 1200, stress: 40)
+            return make(date: date, source: "assumed morning", hours: 5.6, score: 58, hrv: 40, hr: 60, steps: 1200, stress: 40)
         case .rested:
             return make(date: date, source: "sample: well rested", hours: 7.9, score: 86, hrv: 58, hr: 55, steps: 2000, stress: 20)
         case .shortSleep:
