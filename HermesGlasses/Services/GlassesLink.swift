@@ -542,20 +542,7 @@ final class GlassesLink {
     /// As `send(_:label:)`, but the view is built when it actually goes out.
     @discardableResult
     func send(label: String, _ build: @escaping () -> FlexBox) async -> Bool {
-        if let display, displayState == .started {
-            return await doSend(build(), label: label, on: display)
-        }
-        return await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
-            if let older = pendingSend {
-                add("send superseded: \"\(older.label)\" replaced by \"\(label)\"")
-                older.continuation.resume(returning: false)
-            }
-            pendingSend = PendingSend(label: label, build: { build() }, continuation: continuation)
-            add("send queued: \"\(label)\" waits for display .started")
-            setDisplayIssue(nil)
-            startDisplayReadinessTimeout()
-            attachDisplayIfNeeded()
-        }
+        await sendOrQueue(label: label) { build() }
     }
 
     /// Showcase spike: play a video on the lens. Same readiness and pending
@@ -563,7 +550,12 @@ final class GlassesLink {
     /// MP4. Returns true when the SDK accepted the send.
     @discardableResult
     func sendVideo(uri: String, label: String) async -> Bool {
-        let build: () -> any DisplayableView = { VideoPlayer(provider: .uri(uri), codec: .mp4) }
+        await sendOrQueue(label: label) { VideoPlayer(provider: .uri(uri), codec: .mp4) }
+    }
+
+    /// Send now when the display is `.started`, else queue (pending-action
+    /// pattern) until it is. Shared by every kind of view.
+    private func sendOrQueue(label: String, build: @escaping () -> any DisplayableView) async -> Bool {
         if let display, displayState == .started {
             return await doSend(build(), label: label, on: display)
         }

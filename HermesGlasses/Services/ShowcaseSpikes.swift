@@ -138,7 +138,17 @@ enum SpikeClip {
     static func ensure() async throws -> URL {
         let url = Self.url
         if FileManager.default.fileExists(atPath: url.path) { return url }
-        try await write(to: url)
+        // Write beside the target and move into place, so a failed write
+        // never leaves a half-written MP4 for the next call to reuse.
+        let temp = url.deletingLastPathComponent().appendingPathComponent("showcase-spike-clip.tmp.mp4")
+        try? FileManager.default.removeItem(at: temp)
+        do {
+                try await write(to: temp)
+                try FileManager.default.moveItem(at: temp, to: url)
+        } catch {
+            try? FileManager.default.removeItem(at: temp)
+            throw error
+        }
         return url
     }
 
@@ -163,6 +173,7 @@ enum SpikeClip {
         writer.startSession(atSourceTime: .zero)
 
         let colors: [UIColor] = [.systemBlue, .systemOrange, .systemTeal, .systemPurple, .systemGreen]
+        do {
         for frame in 0..<(fps * seconds) {
             while !input.isReadyForMoreMediaData { try await Task.sleep(nanoseconds: 5_000_000) }
             var buffer: CVPixelBuffer?
@@ -184,10 +195,13 @@ enum SpikeClip {
             CVPixelBufferUnlockBaseAddress(buffer, [])
             adaptor.append(buffer, withPresentationTime: CMTime(value: CMTimeValue(frame), timescale: CMTimeScale(fps)))
         }
+        } catch {
+            writer.cancelWriting()
+            throw error
+        }
         input.markAsFinished()
         await writer.finishWriting()
         if writer.status != .completed {
-            try? FileManager.default.removeItem(at: url)
             throw writer.error ?? CocoaError(.fileWriteUnknown)
         }
     }
