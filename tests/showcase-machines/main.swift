@@ -45,6 +45,14 @@ expect(all.matched.map(\.id) == ["wilkinson-tansan"], "matchAll matches Wilkinso
 let dup = DrinkNameMatcher.matchAll("Wilkinson, wilkinson", in: catalog)
 expect(dup.matched.count == 1, "matchAll de-duplicates")
 
+// 「と」 inside catalogue names must not split them
+func ids(_ u: String) -> ([String], [String]) { let r = DrinkNameMatcher.matchAll(u, in: catalog); return (r.matched.map(\.id), r.unmatched) }
+expect(ids("ほっと十六茶") == (["hot-juroku-cha"], []), "ほっと十六茶 -> hot-juroku-cha, nothing unmatched")
+expect(ids("アサヒ ほっと十六茶") == (["hot-juroku-cha"], []), "アサヒ ほっと十六茶 -> hot-juroku-cha only")
+expect(ids("カルピスとほっと十六茶") == (["calpis-water", "hot-juroku-cha"], []), "カルピスとほっと十六茶 -> two drinks")
+expect(ids("カルピスと十六茶") == (["calpis-water", "juroku-cha"], []), "カルピスと十六茶 still splits")
+expect(catalog.drinks.allSatisfy { ids($0.nameJa) == ([$0.id], []) }, "every nameJa round-trips through matchAll")
+
 // machines
 let sample = VendingMachine.sample
 expect(sample.id == "sample" && sample.name == "Asahi lobby" && sample.navigationEnabled && sample.distanceMeters == 40 && sample.customDrinks.isEmpty, "sample fields")
