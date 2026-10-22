@@ -50,12 +50,16 @@
 		AAAA00000000000000000831 /* SimulatedLensView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000832 /* SimulatedLensView.swift */; };
 		AAAA00000000000000000F51 /* LensArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F52 /* LensArt.swift */; };
 		AAAA00000000000000000F60 /* ClipArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F61 /* ClipArt.swift */; };
+		AAAA00000000000000000F80 /* ShowcaseHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F81 /* ShowcaseHomeView.swift */; };
+		AAAA00000000000000000F82 /* MachinesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F83 /* MachinesView.swift */; };
+		AAAA00000000000000000F84 /* GuestProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F85 /* GuestProfileView.swift */; };
 		AAAA00000000000000000835 /* VisionRouting.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000836 /* VisionRouting.swift */; };
 		AAAA00000000000000000F7A /* GlassesSpeechRouting.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F7B /* GlassesSpeechRouting.swift */; };
 		AAAA00000000000000000841 /* ChoiceDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000842 /* ChoiceDetector.swift */; };
 		AAAA00000000000000000A63 /* EmoDrink/ChangeGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000A64 /* EmoDrink/ChangeGate.swift */; };
 		AAAA00000000000000000E01 /* EmoDrink/PhysiologySnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E02 /* EmoDrink/PhysiologySnapshot.swift */; };
 		AAAA00000000000000000F23 /* DrinkNameMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F24 /* DrinkNameMatcher.swift */; };
+		AAAA00000000000000000F86 /* MachineDictation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F87 /* MachineDictation.swift */; };
 		AAAA00000000000000000F70 /* ShowcasePersona.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F71 /* ShowcasePersona.swift */; };
 		AAAA00000000000000000F72 /* ShowcaseClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F73 /* ShowcaseClock.swift */; };
 		AAAA00000000000000000F74 /* ShowcaseRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F75 /* ShowcaseRunner.swift */; };
@@ -146,12 +150,16 @@
 		AAAA00000000000000000832 /* SimulatedLensView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatedLensView.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F52 /* LensArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/LensArt.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F61 /* ClipArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/ClipArt.swift; sourceTree = "<group>"; };
+		AAAA00000000000000000F81 /* ShowcaseHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/ShowcaseHomeView.swift; sourceTree = "<group>"; };
+		AAAA00000000000000000F83 /* MachinesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/MachinesView.swift; sourceTree = "<group>"; };
+		AAAA00000000000000000F85 /* GuestProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/GuestProfileView.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000836 /* VisionRouting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionRouting.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F7B /* GlassesSpeechRouting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassesSpeechRouting.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000842 /* ChoiceDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChoiceDetector.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000A64 /* EmoDrink/ChangeGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/ChangeGate.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E02 /* EmoDrink/PhysiologySnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/PhysiologySnapshot.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F24 /* DrinkNameMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/DrinkNameMatcher.swift; sourceTree = "<group>"; };
+		AAAA00000000000000000F87 /* MachineDictation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/MachineDictation.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F71 /* ShowcasePersona.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/ShowcasePersona.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F73 /* ShowcaseClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/ShowcaseClock.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F75 /* ShowcaseRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/ShowcaseRunner.swift; sourceTree = "<group>"; };
@@ -250,6 +258,9 @@
 				AAAA00000000000000000832 /* SimulatedLensView.swift */,
 				AAAA00000000000000000F52 /* LensArt.swift */,
 				AAAA00000000000000000F61 /* ClipArt.swift */,
+				AAAA00000000000000000F81 /* ShowcaseHomeView.swift */,
+				AAAA00000000000000000F83 /* MachinesView.swift */,
+				AAAA00000000000000000F85 /* GuestProfileView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -299,6 +310,7 @@
 				AAAA00000000000000000A64 /* EmoDrink/ChangeGate.swift */,
 				AAAA00000000000000000E02 /* EmoDrink/PhysiologySnapshot.swift */,
 				AAAA00000000000000000F24 /* DrinkNameMatcher.swift */,
+				AAAA00000000000000000F87 /* MachineDictation.swift */,
 				AAAA00000000000000000F71 /* ShowcasePersona.swift */,
 				AAAA00000000000000000F73 /* ShowcaseClock.swift */,
 				AAAA00000000000000000F75 /* ShowcaseRunner.swift */,
@@ -462,11 +474,15 @@
 				AAAA00000000000000000831 /* SimulatedLensView.swift in Sources */,
 				AAAA00000000000000000F51 /* LensArt.swift in Sources */,
 				AAAA00000000000000000F60 /* ClipArt.swift in Sources */,
+				AAAA00000000000000000F80 /* ShowcaseHomeView.swift in Sources */,
+				AAAA00000000000000000F82 /* MachinesView.swift in Sources */,
+				AAAA00000000000000000F84 /* GuestProfileView.swift in Sources */,
 				AAAA00000000000000000033 /* SettingsView.swift in Sources */,
 				AAAA00000000000000000817 /* HermesDesign.swift in Sources */,
 				AAAA00000000000000000A63 /* EmoDrink/ChangeGate.swift in Sources */,
 				AAAA00000000000000000E01 /* EmoDrink/PhysiologySnapshot.swift in Sources */,
 				AAAA00000000000000000F23 /* DrinkNameMatcher.swift in Sources */,
+				AAAA00000000000000000F86 /* MachineDictation.swift in Sources */,
 				AAAA00000000000000000F70 /* ShowcasePersona.swift in Sources */,
 				AAAA00000000000000000F72 /* ShowcaseClock.swift in Sources */,
 				AAAA00000000000000000F74 /* ShowcaseRunner.swift in Sources */,

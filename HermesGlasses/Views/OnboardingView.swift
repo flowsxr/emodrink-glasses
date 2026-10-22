@@ -383,11 +383,10 @@ struct OnboardingView: View {
             }
         default:
             if ready {
-                HermesPrimaryButton(title: "Start watching", systemImage: "mic") {
+                // Lands on the showcase home with nothing running.
+                HermesPrimaryButton(title: "Get started", systemImage: "arrow.right") {
                     onFinish(true)
                 }
-                Button("Not now") { onFinish(false) }
-                    .font(.system(size: 15, weight: .semibold))
             } else {
                 HermesPrimaryButton(title: "Open Settings", systemImage: "gearshape") {
                     permissions.openSystemSettings()

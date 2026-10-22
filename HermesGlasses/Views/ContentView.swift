@@ -1,7 +1,11 @@
 //
 // ContentView.swift
 //
-// The EmoDrink home: one screen, top to bottom.
+// The root: a NavigationStack on the showcase home (Views/Showcase), with
+// Machines, the machine editor and Live drink mode pushed from it, and
+// Settings and the Transcript in the toolbar.
+//
+// Live drink mode is the old EmoDrink home, unchanged, top to bottom:
 //   1. Lens stage: the iPhone camera with the simulated lens over it in
 //      phone mode; in glasses mode the Ray-Ban camera's latest frame (a
 //      dark stage until one arrives) under the same simulated lens. A
@@ -12,8 +16,8 @@
 //   4. Start / Stop, with "Check now" beside it while watching and
 //      "Test lens" whenever glasses are registered (its report shows
 //      under the row for 6 s).
-// Toolbar: Transcript and Settings. A plain VStack in the safe area with
-// 16 pt side padding; nothing is wider than the screen.
+// A plain VStack in the safe area with 16 pt side padding; nothing is
+// wider than the screen. Its auto-watch runs when it first appears.
 //
 
 import SwiftUI
@@ -51,42 +55,24 @@ struct ContentView: View {
     let wearablesVM: WearablesViewModel
     let hermesVM: HermesSessionViewModel
     let emoDrinkVM: EmoDrinkViewModel
+    /// The showcase autopilot: the root screen drives it.
+    let showcaseVM: ShowcaseViewModel
     /// The Glasses basics tests, reached from Settings › Glasses › Developer.
     let basicsVM: GlassesBasicsViewModel
 
-    @AppStorage("onboarding_complete") private var onboardingComplete = false
     @Environment(\.scenePhase) private var scenePhase
+    @State private var path: [ShowcaseRoute] = []
     @State private var showSettings = false
     @State private var showTranscript = false
     @State private var settingsRoute: SettingsRoute?
-    /// Auto-watch runs once per launch, not on every appear.
+    /// Live drink mode's auto-watch runs once per launch, on its first appear.
     @State private var didAutoStart = false
-    /// The Test lens report, shown under the Start / Stop row for 6 s.
-    @State private var lensTestNotice: String?
-    /// Bumped per Test lens tap, so an older 6 s timer cannot clear a newer report.
-    @State private var lensTestToken = 0
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 12) {
-                LensStage(hermesVM: hermesVM, emoDrinkVM: emoDrinkVM)
-                TodayCard(vm: emoDrinkVM)
-                PickCard(vm: emoDrinkVM)
-                startStopRow
-                if let notice = lensTestNotice {
-                    Label(notice, systemImage: "eyeglasses")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(3)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+        NavigationStack(path: $path) {
+            ShowcaseHomeView(vm: showcaseVM, hermesVM: hermesVM) {
+                showSettings = true
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 12)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(HermesTheme.canvas.ignoresSafeArea())
-            .navigationTitle("EmoDrink")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { showTranscript = true } label: { Image(systemName: "list.bullet") }
@@ -95,6 +81,17 @@ struct ContentView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showSettings = true } label: { Image(systemName: "gearshape") }
                         .accessibilityLabel("Settings")
+                }
+            }
+            .navigationDestination(for: ShowcaseRoute.self) { route in
+                switch route {
+                case .machines:
+                    MachinesView(vm: showcaseVM, path: $path)
+                case .machine(let id):
+                    MachineEditorView(vm: showcaseVM, hermesVM: hermesVM, machineID: id)
+                case .liveDrinkMode:
+                    LiveDrinkModeView(wearablesVM: wearablesVM, hermesVM: hermesVM, emoDrinkVM: emoDrinkVM,
+                                      didAutoStart: $didAutoStart)
                 }
             }
         }
@@ -129,12 +126,7 @@ struct ContentView: View {
         }
         .task {
             hermesVM.logVisionDiagnostics("app-launch")
-            await emoDrinkVM.refreshSnapshot()
-            await autoStartIfNeeded()
             await hermesVM.refreshGlassesCameraStatus()
-        }
-        .onChange(of: onboardingComplete) { _, done in
-            if done { Task { await autoStartIfNeeded() } }
         }
         .onChange(of: wearablesVM.registrationState) { _, state in
             guard state == .registered else { return }
@@ -148,9 +140,65 @@ struct ContentView: View {
             }
         }
     }
+}
 
-    /// Spec section 4: once onboarding is done and "Watch for vending
-    /// machines" is on, opening the app starts the session and drink mode.
+// MARK: - Live drink mode
+
+/// The real EmoDrink home, now one row down from the showcase home: the
+/// lens stage, today's numbers, the pick, Start / Stop. Its auto-watch
+/// (Ruling 3) runs when this screen first appears, not at launch, so the
+/// showcase never shares the lens with a second autopilot.
+struct LiveDrinkModeView: View {
+    let wearablesVM: WearablesViewModel
+    let hermesVM: HermesSessionViewModel
+    let emoDrinkVM: EmoDrinkViewModel
+    /// Owned by the root: auto-watch runs once per launch, not on every push.
+    @Binding var didAutoStart: Bool
+
+    @AppStorage("onboarding_complete") private var onboardingComplete = false
+    @State private var showTranscript = false
+    /// The Test lens report, shown under the Start / Stop row for 6 s.
+    @State private var lensTestNotice: String?
+    /// Bumped per Test lens tap, so an older 6 s timer cannot clear a newer report.
+    @State private var lensTestToken = 0
+
+    var body: some View {
+        VStack(spacing: 12) {
+            LensStage(hermesVM: hermesVM, emoDrinkVM: emoDrinkVM)
+            TodayCard(vm: emoDrinkVM)
+            PickCard(vm: emoDrinkVM)
+            startStopRow
+            if let notice = lensTestNotice {
+                Label(notice, systemImage: "eyeglasses")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(HermesTheme.canvas.ignoresSafeArea())
+        .navigationTitle("Live drink mode")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showTranscript = true } label: { Image(systemName: "list.bullet") }
+                    .accessibilityLabel("Transcript")
+            }
+        }
+        .sheet(isPresented: $showTranscript) {
+            TranscriptSheet(hermesVM: hermesVM)
+        }
+        .task {
+            await emoDrinkVM.refreshSnapshot()
+            await autoStartIfNeeded()
+        }
+    }
+
+    /// Spec section 4, moved by Ruling 3: with "Watch for vending
+    /// machines" on, opening this screen starts the session and drink mode.
     private func autoStartIfNeeded() async {
         guard !didAutoStart, onboardingComplete, emoDrinkVM.autoWatch,
               hermesVM.connectionState == .disconnected else { return }

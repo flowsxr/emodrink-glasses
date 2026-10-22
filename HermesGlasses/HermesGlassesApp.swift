@@ -27,7 +27,7 @@ struct HermesGlassesApp: App {
     @State private var wearablesViewModel: WearablesViewModel
     @State private var hermesSessionViewModel: HermesSessionViewModel
     @State private var emoDrinkViewModel: EmoDrinkViewModel
-    /// The showcase autopilot (Taka's Start). Task 11 puts it on screen.
+    /// The showcase autopilot (Taka's Start), driven by the root screen.
     @State private var showcaseViewModel: ShowcaseViewModel
     @State private var permissions = PermissionsCoordinator()
 
@@ -95,6 +95,7 @@ struct HermesGlassesApp: App {
                     wearablesVM: wearablesViewModel,
                     hermesVM: hermesSessionViewModel,
                     emoDrinkVM: emoDrinkViewModel,
+                    showcaseVM: showcaseViewModel,
                     basicsVM: basicsViewModel
                 )
                 // Handle Meta AI URL callback after registration
@@ -148,14 +149,11 @@ struct HermesGlassesApp: App {
                     wearablesVM: wearablesViewModel,
                     hermesVM: hermesSessionViewModel,
                     permissions: permissions
-                ) { startSession in
+                ) { _ in
+                    // Onboarding lands on the showcase home with nothing
+                    // running: Taka starts a run with Start, and live drink
+                    // mode starts when its own screen opens (Ruling 3).
                     onboardingComplete = true
-                    // With "Watch for vending machines" on, ContentView's
-                    // onChange(of: onboardingComplete) starts session and
-                    // drink mode; starting here too would race it.
-                    if startSession && !emoDrinkViewModel.autoWatch {
-                        Task { await hermesSessionViewModel.startSession() }
-                    }
                 }
             }
         }
