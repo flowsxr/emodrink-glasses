@@ -145,13 +145,14 @@ final class HermesDisplayManager {
         status = .off
         if wasActive, link.isDisplayReady {
             // After any send in flight, so the clear cannot land under it.
+            // clipOnLens is read after it, since an in-flight clip sets it
+            // only when its send returns.
             let inFlight = sendTask
-            let stopClip = clipOnLens
-            clipOnLens = false
-            Task { [link] in
+            Task { [weak self, link] in
                 await inFlight?.value
-                if stopClip { await link.stopVideo() }
+                if self?.clipOnLens == true { await link.stopVideo() }
                 await link.clear()
+                self?.clipOnLens = false
             }
         }
     }
@@ -204,6 +205,8 @@ final class HermesDisplayManager {
                                    }))
             return
         }
+        // A clip on the lens is never painted over by the idle screen.
+        if case .showcase(nil, _?) = content { return }
         _ = attachRedraw?()
     }
 
