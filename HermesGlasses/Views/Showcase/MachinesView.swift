@@ -94,7 +94,7 @@ struct MachineEditorView: View {
                     .background(HermesTheme.groupedCanvas.ignoresSafeArea())
             }
         }
-        .navigationTitle(machine?.name.isEmpty == false ? machine!.name : "Machine")
+        .navigationTitle(machine.map { $0.name.isEmpty ? "Machine" : $0.name } ?? "Machine")
         .navigationBarTitleDisplayMode(.inline)
         .onDisappear {
             if let machine, machine.name.trimmingCharacters(in: .whitespaces).isEmpty {
