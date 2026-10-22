@@ -61,8 +61,8 @@ demo" in [docs/RELEASE.md](docs/RELEASE.md).
    local network (to reach the glasses), and location and motion (device
    context for the assistant: where you are, the weather, walking or still).
 5. **Start watching.** Open **Live drink mode** from the home screen (it
-   starts by itself when that screen appears). The lens shows "Drink mode", "Watching for a
-   vending machine" and a hint to say "what should I drink" /
+   starts by itself when that screen appears). The lens shows "Drink mode",
+   "Watching for a vending machine" and a hint to say "what should I drink" /
    「何を飲めばいい」. At a machine it shows three numbered drinks; pick one by
    tap, number or name, then "Why" / 「なぜ」 or "Thanks" / 「ありがとう」.
 6. **A better voice.** On the iPhone, Settings › Accessibility › Spoken
@@ -81,9 +81,10 @@ demo" in [docs/RELEASE.md](docs/RELEASE.md).
 
 - **Watches in live drink mode.** Opening Live drink mode starts the session
   and drink mode by itself ("Watch for vending machines when the app opens",
-  Settings › Drinks, on by default); the app itself opens on the showcase home. A frame goes to the vision provider only when the scene changes
-  and settles (at most 150 small calls an hour), with one yes or no
-  question: is there a vending machine? "Check now" asks at once.
+  Settings › Drinks, on by default); the app itself opens on the showcase
+  home. A frame goes to the vision provider only when the scene changes and
+  settles (at most 150 small calls an hour), with one yes or no question: is
+  there a vending machine? "Check now" asks at once.
 - **Reads your morning.** Last night's sleep hours and score, HRV and
   resting heart rate against your usual, steps and stress, from a small JSON
   document at a URL you control (the repo's `mock/physiology.json` by

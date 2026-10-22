@@ -62,9 +62,9 @@ EmoDrink.
 ## Before a demo
 
 - Grant microphone, speech and the Meta permissions once, in onboarding.
-- Open the app once beforehand so the clips pre-render (they are cached per
+- Open the showcase home with the demo machine, guest and language selected a minute before, so the clips pre-render (they are cached per
   machine, guest and language; a change re-renders them).
-- Check the glasses display with Settings › Glasses › Developer › Test lens.
+- Check the glasses display with Test lens on Live drink mode, or Settings › Glasses › Developer › Display test.
 
 ## Owner device checks
 
