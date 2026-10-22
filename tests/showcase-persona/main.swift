@@ -46,6 +46,11 @@ expect(e.spoken == "Hi there" && e.focusID == nil, "any [[...]] stripped")
 let f = ShowcaseReply.parse("  [[drink:super-h2o]] ", machineDrinkIDs: ids)
 expect(f.spoken == "" && f.focusID == "super-h2o", "tag only")
 
+let g = ShowcaseReply.parse("Try this [[drink:wonda", machineDrinkIDs: ids)
+expect(g.spoken == "Try this" && g.focusID == nil, "truncated tag dropped: \(g.spoken)")
+let h = ShowcaseReply.parse("Nice. [[Drink:super-h2o]]", machineDrinkIDs: ids)
+expect(h.focusID == "super-h2o", "case-insensitive prefix")
+
 // Fallback
 for l in Language.allCases {
     let s = ShowcaseReply.fallbackLine(strings: ShowcaseStrings(language: l))
@@ -73,6 +78,12 @@ for w in EmoDrinkPersona.emotionDenylist {
     expect(!ja.lowercased().contains(w), "ja prompt free of \(w)")
 }
 
+expect(en.contains("[[drink:wilkinson-tansan]]") && !en.contains("<id>"), "concrete example tag")
+expect(en.contains("at most one drink") && en.contains("even when asked for more") && en.contains("Put the tag last"), "required prompt rules")
+for d in sample.drinkIDs.compactMap({ catalog.drink(id: $0) }) { expect(!ja.contains(d.name), "ja prompt lacks English name \(d.name)") }
+for d in catalog.drinks where !ids.contains(d.id) { expect(!ja.contains(d.nameJa), "ja prompt lacks off-machine \(d.nameJa)") }
+expect(ja.contains("Say drink names only as written in Japanese."), "ja name rule")
+
 // Reveal line
 let reveal = ShowcasePersona.revealLine(run: makeRun(.en), language: .en)
 let front = makeRun(.en).deck.cards[0]
@@ -81,7 +92,8 @@ expect(front.reasons.prefix(2).allSatisfy { reveal.contains($0.label) }, "reveal
 expect(reveal.contains("20 words"), "reveal en limit")
 let revealJa = ShowcasePersona.revealLine(run: makeRun(.ja), language: .ja)
 expect(revealJa.contains("40") && revealJa.contains("Japanese"), "reveal ja limit")
-expect(!reveal.contains("[[drink:") || reveal.contains("no tag") || reveal.contains("No tag"), "reveal needs no tag")
+expect(!reveal.contains("[[") && reveal.contains("Do not add any tag."), "reveal has no tag")
+expect(!revealJa.contains("[["), "reveal ja has no tag")
 
 // Commands
 expect(ShowcaseCommand.spoken("次", language: .ja) == .next, "次")
@@ -95,7 +107,8 @@ expect(ShowcaseCommand.spoken("why", language: .en) == .why, "why")
 expect(ShowcaseCommand.spoken("なぜ", language: .ja) == .why, "なぜ")
 expect(ShowcaseCommand.spoken("I'll take it", language: .en) == .choose, "i'll take it")
 expect(ShowcaseCommand.spoken("これにする", language: .ja) == .choose, "これにする")
-expect(ShowcaseCommand.spoken("それで", language: .ja) == .choose, "それで")
+expect(ShowcaseCommand.spoken("これください", language: .ja) == .choose, "これください")
+expect(ShowcaseCommand.spoken("それで", language: .ja) == nil && ShowcaseCommand.spoken("これで", language: .ja) == nil, "filler not choose")
 expect(ShowcaseCommand.spoken("what's next for me today", language: .en) == nil, "whole utterance")
 expect(ShowcaseCommand.spoken("", language: .en) == nil, "empty")
 let sets = ShowcaseCommand.phraseSets

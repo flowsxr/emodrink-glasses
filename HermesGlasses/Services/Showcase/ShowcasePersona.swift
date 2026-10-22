@@ -12,9 +12,12 @@ import Foundation
 
 enum ShowcasePersona {
     static func systemPrompt(run: ShowcaseRun, language: Language) -> String {
+        let ja = language == .ja
         let list = run.machineDrinks.map {
-            "- id \($0.id): \($0.name) (\($0.nameJa)), \(functionList($0)), caffeine \($0.caffeineMg) mg, sugar \($0.sugar.rawValue)"
+            "- id \($0.id): \(ja ? $0.nameJa : "\($0.name) (\($0.nameJa))"), \(functionList($0)), caffeine \($0.caffeineMg) mg, sugar \($0.sugar.rawValue)"
         }
+        let exampleID = run.machineDrinks.first?.id ?? "drink-id"
+        let nameRule = ja ? "\n        - Say drink names only as written in Japanese." : ""
         return """
         You are the drink assistant on the guest's smart glasses, standing with them at a beverage vending machine. \
         Your answers are spoken aloud.
@@ -29,9 +32,10 @@ enum ShowcasePersona {
         and you never name a feeling or a mental state.
         - No medical or health claims. A drink is a small, pleasant choice, not a treatment.
         - Recommend only drinks from the list above. If asked for something the machine does not sell, say so and offer the closest one from the list.
-        - Reply in at most two short spoken sentences.
-        - When your reply is about one of the drinks, end it with its tag exactly as [[drink:<id>]] using the id from the list. \
-        The tag is not spoken. Without a drink in your reply, add no tag.
+        - Reply in at most two short spoken sentences, even when asked for more.
+        - Name at most one drink per reply, and tag only that one.
+        - When your reply is about a drink, end it with its tag using the id from the list, for example [[drink:\(exampleID)]]. \
+        Put the tag last, after the final full stop. The tag is not spoken. Without a drink in your reply, add no tag.\(nameRule)
 
         \(EmoDrinkPersona.languageRule(language)) \(language == .ja ? "Japanese only." : "English only.")
         """
@@ -47,7 +51,7 @@ enum ShowcasePersona {
         Say one warm sentence, \(limit), suggesting \(front.name). \
         The two reasons on its card are: \(reasons). \
         Today's body data: \(EmoDrinkPersona.summary(of: run.snapshot)). \
-        Suggest, never diagnose, and name no feeling. No tag is needed.
+        Suggest, never diagnose, and name no feeling. Do not add any tag.
 
         \(EmoDrinkPersona.languageRule(language)) \(language == .ja ? "Japanese only." : "English only.")
         """
@@ -69,12 +73,12 @@ enum ShowcaseReply {
             spoken += rest[..<open.lowerBound]
             let after = rest[open.upperBound...]
             guard let close = after.range(of: "]]") else {
-                // Unterminated: keep the text, drop the dangling marker.
-                rest = after
-                continue
+                // Unterminated (cut off): drop everything from the marker on.
+                rest = ""
+                break
             }
             let body = after[..<close.lowerBound].trimmingCharacters(in: .whitespaces)
-            if body.hasPrefix("drink:") {
+            if body.lowercased().hasPrefix("drink:") {
                 let id = body.dropFirst("drink:".count).trimmingCharacters(in: .whitespaces)
                 if machineDrinkIDs.contains(id) { focus = id }
             }
@@ -95,7 +99,7 @@ enum ShowcaseCommand: Equatable {
     static let previousPhrases: Set<String> = ["previous", "go back one", "前", "前の"]
     static let whyPhrases: Set<String> = ["why", "why this", "なぜ", "どうして", "理由は"]
     static let choosePhrases: Set<String> = [
-        "choose", "i'll take it", "this one", "that one", "これにする", "それにする", "これで", "それで",
+        "choose", "i'll take it", "this one", "that one", "これにする", "それにする", "これください",
     ]
     static let backPhrases: Set<String> = ["back", "go back", "戻る", "戻って"]
 
