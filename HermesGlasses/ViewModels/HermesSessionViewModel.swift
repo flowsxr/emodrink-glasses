@@ -102,9 +102,10 @@ final class HermesSessionViewModel {
     /// `stopSpeaking()`, on cancellation or after a length-based cap.
     @ObservationIgnored private var speechWaiter: CheckedContinuation<Void, Never>?
     @ObservationIgnored private var speechWaiterToken = 0
-    /// Finishes to ignore before the waiter's own: replacing an on-device
-    /// line fires one onFinished for the cancelled line.
-    @ObservationIgnored private var speechWaiterSkips = 0
+    /// Replacing an on-device line fires one onFinished for the cancelled
+    /// line while the new one plays: that finish is ignored ENTIRELY (no
+    /// waiter release, no state change, no unsuspend).
+    @ObservationIgnored private var speechFinishGate = SpeechFinishGate()
 
     /// Glasses camera permission (granted in the Meta AI app); nil = unknown.
     /// GlassesLink holds it, so the basics screen and Settings agree.
@@ -448,6 +449,7 @@ final class HermesSessionViewModel {
         // Wired at init, NOT at session start: lens callbacks must exist
         // before any session does (see CLAUDE.md, display callbacks).
         wireDisplay()
+        wireSpeechFinished()
         speechSynthesizer.onCloudOutcome = { [weak self] success in
             Task { @MainActor [weak self] in self?.cloudVoiceFellBack = !success }
         }
@@ -603,29 +605,6 @@ final class HermesSessionViewModel {
                 // Grace period: let the speaker's tail fade before the mic
                 // listens again, or the recognizer hears the end of the TTS
                 try? await Task.sleep(nanoseconds: Self.speechResumeGraceNanos)
-                self.speechRecognizer.isSuspended = false
-            }
-        }
-
-        // On-device TTS finished (or was interrupted) - same completion
-        // flow as audio playback
-        speechSynthesizer.onFinished = { [weak self] in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.speechLineFinished()
-                // A queued cue speaks next with the recognizer still
-                // suspended: state stays .speaking, no grace gap in between.
-                if case .speaking = self.connectionState, !self.cueQueue.isEmpty {
-                    self.speechSynthesizer.speak(self.cueQueue.removeFirst())
-                    return
-                }
-                self.displayManager.replySpeakingFinished()
-                if case .speaking = self.connectionState {
-                    self.connectionState = .listening
-                }
-                try? await Task.sleep(nanoseconds: Self.speechResumeGraceNanos)
-                // A cue that started during the grace owns the suspension.
-                if case .speaking = self.connectionState { return }
                 self.speechRecognizer.isSuspended = false
             }
         }
@@ -1075,7 +1054,7 @@ final class HermesSessionViewModel {
         default:
             return
         }
-        speechWaiterSkips = speechSynthesizer.isSpeakingOnDevice ? 1 : 0
+        if speechSynthesizer.isSpeakingOnDevice { speechFinishGate.expectStale() } else { speechFinishGate.reset() }
         speechSynthesizer.speak(trimmed)
         speechWaiterToken += 1
         let token = speechWaiterToken
@@ -1102,6 +1081,7 @@ final class HermesSessionViewModel {
     func stopSpeaking() {
         cueQueue.removeAll()
         releaseSpeechWaiter()
+        speechFinishGate.reset()
         if speechSynthesizer.isSpeaking { speechSynthesizer.stop() }
     }
 
@@ -1110,21 +1090,48 @@ final class HermesSessionViewModel {
         UInt64(min(45, 12 + Double(text.count) * 0.15) * 1_000_000_000)
     }
 
-    private func speechLineFinished() {
-        guard speechWaiter != nil else { return }
-        if speechWaiterSkips > 0 {
-            speechWaiterSkips -= 1
-            return
-        }
+    /// False when this finish belongs to a replaced line (ignore it whole);
+    /// otherwise releases a waiting line and returns true.
+    private func speechLineFinished() -> Bool {
+        if speechFinishGate.isStale(stillSpeaking: speechSynthesizer.isSpeaking) { return false }
         releaseSpeechWaiter()
+        return true
     }
 
     private func releaseSpeechWaiter() {
         speechWaiterToken += 1
-        speechWaiterSkips = 0
         let waiter = speechWaiter
         speechWaiter = nil
         waiter?.resume()
+    }
+
+    /// On-device or cloud TTS finished (or was interrupted) - same
+    /// completion flow as audio playback. Wired once at init, not at
+    /// session start: a line spoken with no session (the showcase on the
+    /// phone mirror, a cue while disconnected) must still release its
+    /// waiter instead of running to its cap.
+    private func wireSpeechFinished() {
+        speechSynthesizer.onFinished = { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                // A replaced line's finish: the new line owns the state.
+                guard self.speechLineFinished() else { return }
+                // A queued cue speaks next with the recognizer still
+                // suspended: state stays .speaking, no grace gap in between.
+                if case .speaking = self.connectionState, !self.cueQueue.isEmpty {
+                    self.speechSynthesizer.speak(self.cueQueue.removeFirst())
+                    return
+                }
+                self.displayManager.replySpeakingFinished()
+                if case .speaking = self.connectionState {
+                    self.connectionState = .listening
+                }
+                try? await Task.sleep(nanoseconds: Self.speechResumeGraceNanos)
+                // A cue that started during the grace owns the suspension.
+                if case .speaking = self.connectionState { return }
+                self.speechRecognizer.isSuspended = false
+            }
+        }
     }
 
     // MARK: Showcase surface
@@ -1169,6 +1176,7 @@ final class HermesSessionViewModel {
         emoEnding?()
         cueQueue.removeAll()
         releaseSpeechWaiter()
+        speechFinishGate.reset()
         speechSynthesizer.stop()
         speechRecognizer.stop()
         displayManager.deactivate()

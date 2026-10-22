@@ -30,6 +30,8 @@ protocol ShowcaseEffects: AnyObject {
     func show(deck: ShowcaseDeck, mode: DeckMode, buttons: [ShowcaseButton])
     /// Speaks a line and returns when it has been spoken (or was stopped).
     func say(_ text: String) async
+    /// Stops the line being spoken; its `say` returns.
+    func stopSpeaking()
     /// One AI call; nil on timeout (6 s) or error.
     func ask(system: String, user: String) async -> String?
     func clearLens()
@@ -65,6 +67,9 @@ final class ShowcaseRunner {
     private var inputSerial = 0
     /// After the conversation brought a card forward, the card it replaced.
     private var backTarget: ShowcaseCard?
+    /// Deck lines (reveal, why, reply) being spoken: a line about the old
+    /// front card is stopped when the front changes.
+    private var deckLinesSpeaking = 0
 
     private var runTask: Task<Void, Never>?
     private var idleTask: Task<Void, Never>?
@@ -153,7 +158,7 @@ final class ShowcaseRunner {
         guard alive(gen) else { return }
         if serial == inputSerial {
             let spoken = reply.map { ShowcaseReply.parse($0, machineDrinkIDs: machineDrinkIDs).spoken } ?? ""
-            await effects.say(spoken.isEmpty ? scriptedReveal(front) : spoken)
+            await sayDeckLine(spoken.isEmpty ? scriptedReveal(front) : spoken)
             guard alive(gen) else { return }
             if serial == inputSerial { present(.why) }
         }
@@ -169,14 +174,18 @@ final class ShowcaseRunner {
         case .next:
             run.deck.next()
             backTarget = nil
+            frontChanged()
             present(.reveal)
         case .previous:
             run.deck.previous()
             backTarget = nil
+            frontChanged()
             present(.reveal)
         case .why:
             present(.why)
+            // Idle restarts once the reason has been spoken.
             speak(scriptedReveal(run.deck.cards[0]))
+            return
         case .choose:
             choose()
             return
@@ -184,9 +193,11 @@ final class ShowcaseRunner {
             if let target = backTarget {
                 backTarget = nil
                 run.deck.bringToFront(drinkID: target.drinkID)
+                frontChanged()
                 present(.why)
             } else {
                 run.deck.previous()
+                frontChanged()
                 present(.reveal)
             }
         }
@@ -204,7 +215,6 @@ final class ShowcaseRunner {
             return true
         }
         noteInput()
-        restartIdle()
         let gen = generation, serial = inputSerial
         let reply = await effects.ask(system: ShowcasePersona.systemPrompt(run: run, language: strings.language),
                                       user: text)
@@ -218,9 +228,10 @@ final class ShowcaseRunner {
             }
         }
         let spoken = parsed?.spoken ?? ""
-        restartIdle()
         speechTask?.cancel()
-        await effects.say(spoken.isEmpty ? ShowcaseReply.fallbackLine(strings: strings) : spoken)
+        await sayDeckLine(spoken.isEmpty ? ShowcaseReply.fallbackLine(strings: strings) : spoken)
+        // The idle timers count from the end of the reply, not its start.
+        if alive(gen), serial == inputSerial { restartIdle() }
         return true
     }
 
@@ -249,11 +260,27 @@ final class ShowcaseRunner {
         return strings.spokenReveal(drink: card.name, reason: reason)
     }
 
-    /// A spoken line the runner does not wait on (the Why answer).
+    /// A spoken line the runner does not wait on (the Why answer); the
+    /// idle timers restart when it ends, unless a newer input came first.
     private func speak(_ text: String) {
         speechTask?.cancel()
-        let effects = self.effects
-        speechTask = Task { if !Task.isCancelled { await effects.say(text) } }
+        let gen = generation, serial = inputSerial
+        speechTask = Task { [weak self] in
+            guard let self, !Task.isCancelled else { return }
+            await self.sayDeckLine(text)
+            if self.alive(gen), serial == self.inputSerial { self.restartIdle() }
+        }
+    }
+
+    private func sayDeckLine(_ text: String) async {
+        deckLinesSpeaking += 1
+        defer { deckLinesSpeaking -= 1 }
+        await effects.say(text)
+    }
+
+    /// The front card changed under a line about the old one: stop it.
+    private func frontChanged() {
+        if deckLinesSpeaking > 0 { effects.stopSpeaking() }
     }
 
     /// Idle: one `next()` every 8 s until the first card is back in front,

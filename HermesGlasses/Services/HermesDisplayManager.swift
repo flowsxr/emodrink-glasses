@@ -389,6 +389,11 @@ final class HermesDisplayManager {
     }
 
     func clear() {
+        // A clip still starting (HTTP server, queued send) is dropped, even
+        // when the lens is off and send() below returns early.
+        clipGeneration += 1
+        stopClipServer()
+        dropQueued()
         content = .blank
         cancelDwell()
         lastReplyText = ""

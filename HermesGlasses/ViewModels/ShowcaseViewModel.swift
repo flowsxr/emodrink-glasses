@@ -66,6 +66,9 @@ final class ShowcaseViewModel {
     private(set) var preparing = false
     /// From Start until the run ends or is reset.
     private(set) var running = false
+    /// Something Taka should know about the current run (no voice session),
+    /// in the run's language; nil when all is well.
+    private(set) var runNotice: String?
 
     let catalog: DrinkCatalog?
 
@@ -150,6 +153,7 @@ final class ShowcaseViewModel {
         startGeneration += 1
         let gen = startGeneration
         running = true
+        runNotice = nil
         let lang = language
         let strings = ShowcaseStrings(language: lang)
         // Claimed from the first moment: the guest may talk while clips render.
@@ -173,6 +177,9 @@ final class ShowcaseViewModel {
         guard gen == startGeneration else { return }
         if hermesVM.connectionState == .disconnected { await hermesVM.startSession() }
         guard gen == startGeneration else { return }
+        // No session (no key, audio failure): the run still plays on the
+        // lens and the phone mirror, but nobody is listening.
+        if hermesVM.connectionState == .disconnected { runNotice = strings.noVoiceSession }
 
         let run: ShowcaseRun
         do {
@@ -197,6 +204,7 @@ final class ShowcaseViewModel {
 
     func reset() {
         startGeneration += 1
+        runNotice = nil
         let active = runner
         runner = nil
         active?.reset()
@@ -390,6 +398,10 @@ extension ShowcaseViewModel: ShowcaseEffects {
 
     func say(_ text: String) async {
         await hermesVM.speakCueAndWait(text)
+    }
+
+    func stopSpeaking() {
+        hermesVM.stopSpeaking()
     }
 
     /// One AI call raced against 6 s; nil on timeout or error.

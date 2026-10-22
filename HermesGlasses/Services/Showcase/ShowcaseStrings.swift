@@ -53,6 +53,10 @@ struct ShowcaseStrings {
     }
     var noMachine: String { ja ? "自販機を選んでください。" : "Pick a machine first." }
     var preparing: String { ja ? "準備中…" : "Preparing…" }
+    var noVoiceSession: String {
+        ja ? "音声セッションを開始できませんでした。聞き取りなしで、画面だけで進めます。"
+           : "The voice session did not start. The run plays without listening."
+    }
 
     // MARK: Clip labels (morning and navigate)
 
@@ -166,7 +170,7 @@ struct ShowcaseStrings {
                    scanLine(count: 5), navigationLine(distance: "40メートル", name: "自販機"),
                    confirmLine, fallbackConversation,
                    spokenNavigate, spokenMorning, spokenScan, spokenReveal(drink: "ドリンク", reason: "睡眠不足"),
-                   spokenRevealPlain(drink: "ドリンク"), catalogMissing, machineEmpty, noMachine, preparing,
+                   spokenRevealPlain(drink: "ドリンク"), catalogMissing, machineEmpty, noMachine, preparing, noVoiceSession,
                    shortSleepLabel, hrvLowLabel, heartRateUpLabel, stressedLabel, wellRestedLabel, activeMorningLabel,
                    sleepWord, hrvLabel, restingHRLabel, hrvUnit, bpmUnit, distanceUnit, here,
                    sleepDuration(hours: 5.8), versusUsual(-12), versusUsual(3), versusUsual(0)]

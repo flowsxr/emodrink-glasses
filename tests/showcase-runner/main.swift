@@ -17,6 +17,7 @@
 //     HermesGlasses/Services/Showcase/ShowcasePersona.swift \
 //     HermesGlasses/Services/Showcase/ShowcaseClock.swift \
 //     HermesGlasses/Services/Showcase/ShowcaseRunner.swift \
+//     HermesGlasses/Services/Showcase/SpeechFinishGate.swift \
 //     tests/showcase-runner/main.swift -o $TMPDIR/showcase-runner && $TMPDIR/showcase-runner
 //
 import Foundation
@@ -50,9 +51,24 @@ final class FakeEffects: ShowcaseEffects {
         lastButtons = buttons
     }
 
+    /// Test-clock seconds each line takes (0 = instant); stopSpeaking ends it.
+    var sayDuration: TimeInterval = 0
+    var clock: TestShowcaseClock?
+    private var speaking: Task<Void, Never>?
+
     func say(_ text: String) async {
         events.append("say:\(text)")
         said.append(text)
+        guard sayDuration > 0, let clock else { return }
+        let d = sayDuration
+        let t = Task { _ = try? await clock.sleep(d) }
+        speaking = t
+        await t.value
+    }
+
+    func stopSpeaking() {
+        events.append("stop")
+        speaking?.cancel()
     }
 
     func ask(system: String, user: String) async -> String? {
@@ -63,7 +79,7 @@ final class FakeEffects: ShowcaseEffects {
 
     func clearLens() { events.append("clear") }
 
-    var nonSpeech: [String] { events.filter { !$0.hasPrefix("say:") && $0 != "ask" } }
+    var nonSpeech: [String] { events.filter { !$0.hasPrefix("say:") && $0 != "ask" && $0 != "stop" } }
 }
 
 func settle() async { for _ in 0..<60 { await Task.yield() } }
@@ -86,6 +102,7 @@ func makeRun(navigation: Bool = true, language: Language = .en) -> ShowcaseRun {
     let run = makeRun(navigation: navigation, language: language)
     let fx = FakeEffects()
     let clock = TestShowcaseClock()
+    fx.clock = clock
     let runner = ShowcaseRunner(run: run, strings: ShowcaseStrings(language: language), effects: fx, clock: clock)
     return Rig(runner: runner, fx: fx, clock: clock, run: run)
 }
@@ -392,6 +409,7 @@ do {
             return await withCheckedContinuation { pending = $0 }
         }
         func clearLens() { inner.clearLens() }
+        func stopSpeaking() { inner.stopSpeaking() }
     }
     let run = makeRun(navigation: false)
     let fx = SlowEffects()
@@ -431,6 +449,7 @@ do {
             return await withCheckedContinuation { pending.append($0) }
         }
         func clearLens() { inner.clearLens() }
+        func stopSpeaking() { inner.stopSpeaking() }
     }
     let run = makeRun(navigation: false)
     let fx = Held()
@@ -466,6 +485,113 @@ for yields in 1..<8 {
     let afterClear = r.fx.events.drop { $0 != "clear" }.dropFirst()
     expect(afterClear.isEmpty, "reset after \(yields) yields: nothing after the clear (got \(Array(afterClear)))")
     expect(r.runner.step == .idle && r.clock.pendingSleepers == 0, "reset after \(yields) yields: idle, no sleepers")
+}
+
+// MARK: idle waits for speech (fix round 1)
+
+do {
+    // A 20 s reply: no rotation until 8 s after it ends.
+    let r = rig()
+    await toDeck(r)
+    let order = r.runner.deck.cards.map(\.drinkID)
+    r.fx.sayDuration = 20
+    r.fx.replies = ["A long, thoughtful answer."]
+    Task { _ = await r.runner.handleUtterance("tell me everything") }
+    await settle()
+    await r.clock.advance(by: 19)
+    expect(r.runner.deck.cards[0].drinkID == order[0], "long reply: no rotation while speaking (19 s)")
+    await r.clock.advance(by: 1)   // reply ends at 20 s
+    await r.clock.advance(by: 7)
+    expect(r.runner.deck.cards[0].drinkID == order[0], "long reply: no rotation 7 s after it ends")
+    await r.clock.advance(by: 1)
+    expect(r.runner.deck.cards[0].drinkID == order[1], "long reply: rotation 8 s after it ends")
+    r.runner.reset()
+}
+
+do {
+    // The Why line: idle counts from its end too.
+    let r = rig()
+    await toDeck(r)
+    let order = r.runner.deck.cards.map(\.drinkID)
+    r.fx.sayDuration = 20
+    r.runner.handle(.why)
+    await settle()
+    await r.clock.advance(by: 27)
+    expect(r.runner.deck.cards[0].drinkID == order[0], "why: no rotation 7 s after the reason ends")
+    await r.clock.advance(by: 1)
+    expect(r.runner.deck.cards[0].drinkID == order[1], "why: rotation 8 s after the reason ends")
+    await r.clock.advance(by: 37)
+    if case .chosen = r.runner.step { expect(true, "why: choose 45 s after the reason ends") }
+    else { expect(false, "why: choose 45 s after the reason ends (step \(r.runner.step))") }
+    r.runner.reset()
+}
+
+// MARK: a front change stops the old card's line (fix round 1)
+
+do {
+    let r = rig(navigation: false)
+    let order = r.run.deck.cards.map(\.drinkID)
+    Task { await r.runner.start() }
+    await settle()
+    await r.clock.advance(by: 22)          // clips done; the reveal is speaking
+    r.fx.sayDuration = 20
+    await settle()
+    // The reveal line started instantly (sayDuration was 0); start a long one.
+    r.runner.handle(.why)
+    await settle()
+    expect(!r.fx.events.contains("stop"), "front change: premise, nothing stopped yet")
+    r.runner.handle(.next)
+    await settle()
+    expect(r.fx.events.last(where: { $0 == "stop" }) != nil, "front change: next stops the line about the old card")
+    expect(r.fx.lastDeck?.cards[0].drinkID == order[1] && r.fx.lastMode == .reveal, "front change: new front shown")
+    r.runner.reset()
+}
+
+do {
+    // Next during the reveal speech itself: the line stops, no Why for the old card.
+    let r = rig(navigation: false)
+    r.fx.sayDuration = 0
+    Task { await r.runner.start() }
+    await settle()
+    await r.clock.advance(by: 12)
+    await r.clock.advance(by: 9.9)
+    r.fx.sayDuration = 20                 // the reveal line will take 20 s
+    await r.clock.advance(by: 0.1)        // scan ends: reveal shown, asked, speaking
+    let first = r.run.deck.cards[0].drinkID
+    expect(r.fx.events.contains("show:reveal:\(first)") && r.fx.said.last == "A fresh start.",
+           "reveal stop: premise, the reveal line is speaking")
+    r.runner.handle(.next)
+    await settle()
+    expect(r.fx.events.contains("stop"), "reveal stop: the reveal line is stopped")
+    await r.clock.advance(by: 30)
+    expect(!r.fx.events.contains("show:why:\(first)"), "reveal stop: no Why card for the old front")
+    expect(r.runner.deck.cards[0].drinkID == r.run.deck.cards[1].drinkID, "reveal stop: the new front stays")
+    r.runner.reset()
+}
+
+do {
+    // Idle rotation with nothing speaking never stops speech.
+    let r = rig()
+    await toDeck(r)
+    await r.clock.advance(by: 8)
+    expect(!r.fx.events.contains("stop"), "rotation: no stop when nothing speaks")
+    r.runner.reset()
+}
+
+// MARK: SpeechFinishGate
+
+do {
+    var g = SpeechFinishGate()
+    expect(!g.isStale(stillSpeaking: true), "gate: nothing expected, a finish is real")
+    g.expectStale()
+    expect(g.isStale(stillSpeaking: true), "gate: replaced line's finish while the new one plays is stale")
+    expect(!g.isStale(stillSpeaking: false), "gate: the next finish is real")
+    g.expectStale()
+    expect(!g.isStale(stillSpeaking: false), "gate: expected stale never came, nothing speaking: real finish")
+    expect(!g.isStale(stillSpeaking: true), "gate: consumed either way")
+    g.expectStale()
+    g.reset()
+    expect(!g.isStale(stillSpeaking: true), "gate: reset (stop) forgets the expectation")
 }
 
 // MARK: runsWithoutGlasses
@@ -506,6 +632,7 @@ do {
         }
         func ask(system: String, user: String) async -> String? { nil }
         func clearLens() { inner.clearLens() }
+        func stopSpeaking() { inner.stopSpeaking() }
     }
     let run = makeRun(navigation: true)
     let clock = TestShowcaseClock()
