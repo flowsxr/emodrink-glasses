@@ -24,6 +24,9 @@ final class ShowcaseViewModel {
     static let machineKey = "showcase_machine_id"
     static let languageKey = "showcase_language"
     static let profileKey = "showcase_profile"
+    /// Developer setting: swipes on the glasses or Neural Band drive the deck.
+    static let glassesSwipeKey = "showcase_glasses_swipe"
+    private static let navKey = "showcase"
     static let askTimeout: TimeInterval = 6
     static let askMaxTokens = 200
     /// Bump when clip art changes so cached files are re-rendered.
@@ -159,6 +162,8 @@ final class ShowcaseViewModel {
         // Claimed from the first moment: the guest may talk while clips render.
         hermesVM.showcaseClaimer = { [weak self] text in self?.claim(text) ?? false }
 
+        hermesVM.glassesLink.observeNavigation(Self.navKey) { [weak self] nav in self?.navigated(nav) }
+
         // Two autopilots on one lens would fight (Ruling 3).
         stopLiveDrinkMode()
 
@@ -230,6 +235,7 @@ final class ShowcaseViewModel {
 
     /// The run is over: release the voice loop back to the assistant.
     private func teardown() {
+        hermesVM.glassesLink.stopObservingNavigation(Self.navKey)
         hermesVM.showcaseClaimer = nil
         hermesVM.setPersonaOverride(nil)
         runner = nil
@@ -245,6 +251,17 @@ final class ShowcaseViewModel {
             Task { _ = await runner.handleUtterance(text) }
         }
         return true
+    }
+
+    /// Swipe forward/back rotate the deck, select picks; deck step only.
+    private func navigated(_ nav: GlassesLink.GlassesNav) {
+        guard running, step == .deck,
+              defaults.object(forKey: Self.glassesSwipeKey) as? Bool ?? true else { return }
+        switch nav {
+        case .forward: runner?.handle(.next)
+        case .backward: runner?.handle(.previous)
+        case .select: runner?.handle(.choose)
+        }
     }
 
     private func tapped(_ button: ShowcaseButton) {

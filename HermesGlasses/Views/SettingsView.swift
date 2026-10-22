@@ -144,6 +144,7 @@ private struct GlassesPage: View {
     let basicsVM: GlassesBasicsViewModel
     @State private var showBasics = false
     @AppStorage(HermesDisplayManager.clipTransportKey) private var clipTransport = "file"
+    @AppStorage(ShowcaseViewModel.glassesSwipeKey) private var glassesSwipe = true
 
     var body: some View {
         HermesScrollPage {
@@ -176,6 +177,11 @@ private struct GlassesPage: View {
                 Toggle(isOn: Binding(get: { clipTransport == "http" },
                                      set: { clipTransport = $0 ? "http" : "file" })) {
                     HermesRow("Showcase clips over local HTTP", icon: "network", mutedIcon: true, showsChevron: false)
+                }
+                .padding(.trailing, 16)
+                HermesDivider()
+                Toggle(isOn: $glassesSwipe) {
+                    HermesRow("Showcase glasses swipe", icon: "hand.draw", mutedIcon: true, showsChevron: false)
                 }
                 .padding(.trailing, 16)
             }

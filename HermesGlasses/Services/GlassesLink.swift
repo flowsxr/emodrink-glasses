@@ -198,6 +198,8 @@ final class GlassesLink {
     @ObservationIgnored private let speechTokenBag = ListenerTokenBag()
     @ObservationIgnored private var inputs: Inputs?
     @ObservationIgnored private var inputsTask: Task<Void, Never>?
+    @ObservationIgnored private var navObservers: [String: @MainActor (GlassesNav) -> Void] = [:]
+    @ObservationIgnored private var debugInputHandler: (@MainActor (String) -> Void)?
 
     @ObservationIgnored private var camera: MWDATCamera.Camera?
     @ObservationIgnored private let streamTokenBag = ListenerTokenBag()
@@ -488,6 +490,7 @@ final class GlassesLink {
         switch state {
         case .started:
             requiresDATAppUpdate = false
+            syncInputs()
             if wantDisplay, display == nil {
                 wantDisplay = false
                 setupDisplay(on: session)
@@ -977,14 +980,76 @@ final class GlassesLink {
         try? deviceSession?.removeSpeech()
     }
 
+    /// What a guest's gesture means to a screen, whichever input made it.
+    /// Mapping from the SDK's `InputEvent` (see `GlassesNav.from`):
+    /// - `.nav` right or down -> `.forward`; left or up -> `.backward`
+    ///   (swipe direction on the temple pad or Neural Band)
+    /// - `.select`, and the `.action` button -> `.select`
+    /// - `.back`, `.capture`, `.drag` and other buttons are ignored.
+    enum GlassesNav: Equatable {
+        case forward, backward, select
+
+        static func from(_ event: InputEvent) -> GlassesNav? {
+            switch event {
+            case .nav(let direction, _, _):
+                switch direction {
+                case .right, .down: return .forward
+                case .left, .up: return .backward
+                @unknown default: return nil
+                }
+            case .select: return .select
+            case .button(let type, _, _): return type == .action ? .select : nil
+            case .back, .capture, .drag: return nil
+            @unknown default: return nil
+            }
+        }
+    }
+
+    /// Showcase: gesture callbacks by key. Registering never starts a
+    /// session; the inputs capability attaches when one is `.started`
+    /// (immediately if it already is) and again after a restart.
+    func observeNavigation(_ key: String, _ handler: @escaping @MainActor (GlassesNav) -> Void) {
+        navObservers[key] = handler
+        syncInputs()
+    }
+
+    func stopObservingNavigation(_ key: String) {
+        guard navObservers.removeValue(forKey: key) != nil else { return }
+        syncInputs()
+    }
+
     /// Showcase spike: a debug description of every glasses input event
-    /// (swipes, taps, buttons). Replaces an earlier handler.
+    /// (swipes, taps, buttons). Replaces an earlier handler. Needs a started
+    /// session (`ensureSession()` first).
     func observeGlassesInputs(_ handler: @escaping @MainActor (String) -> Void) {
-        guard let session = deviceSession, session.state == .started else {
+        guard deviceSession?.state == .started else {
             add("observeGlassesInputs: no started session (\(sessionStateText))")
             return
         }
-        stopObservingGlassesInputs()
+        debugInputHandler = handler
+        syncInputs()
+    }
+
+    func stopObservingGlassesInputs() {
+        guard debugInputHandler != nil else { return }
+        debugInputHandler = nil
+        syncInputs()
+    }
+
+    /// Attach the inputs capability when someone listens and the session is
+    /// started; detach when nobody does.
+    private func syncInputs() {
+        let wanted = !navObservers.isEmpty || debugInputHandler != nil
+        if !wanted {
+            guard inputs != nil else { return }
+            inputsTask?.cancel()
+            inputsTask = nil
+            inputs = nil
+            add("inputs: stopped listening")
+            try? deviceSession?.removeInputs()
+            return
+        }
+        guard inputs == nil, let session = deviceSession, session.state == .started else { return }
         do {
             guard let capability = try session.addInputs() else {
                 add("addInputs returned nil")
@@ -995,24 +1060,17 @@ final class GlassesLink {
             let events = capability.events
             inputsTask = Task { [weak self] in
                 for await event in events {
-                    guard !Task.isCancelled else { return }
-                    let text = String(describing: event)
-                    self?.add("input: \(text)")
-                    handler(text)
+                    guard !Task.isCancelled, let self else { return }
+                    self.add("input: \(String(describing: event))")
+                    self.debugInputHandler?(String(describing: event))
+                    if let nav = GlassesNav.from(event) {
+                        for handler in Array(self.navObservers.values) { handler(nav) }
+                    }
                 }
             }
         } catch {
             add("addInputs FAILED: \(error.localizedDescription) [\(error)]")
         }
-    }
-
-    func stopObservingGlassesInputs() {
-        guard inputs != nil else { return }
-        inputsTask?.cancel()
-        inputsTask = nil
-        inputs = nil
-        add("inputs: stopped listening")
-        try? deviceSession?.removeInputs()
     }
 
     // MARK: - Reset
