@@ -160,6 +160,7 @@ final class EmoDrinkViewModel {
     /// by the home screen on appear; `autoWatch` gates only that on-appear
     /// call (in ContentView), never this.
     func start() async {
+        await endShowcaseSessionIfNeeded()
         // A Stop while the session starts must win: bail, do not watch.
         let gen = hermesVM.sessionGeneration
         if hermesVM.connectionState == .disconnected {
@@ -172,6 +173,17 @@ final class EmoDrinkViewModel {
         }
         sessionBlocked = micDenied ? strings.micBlocked : nil
         await startDrinkMode()
+    }
+
+    /// The showcase's session (left up after Reset so the next guest starts
+    /// fast) has no camera, no context and no camera resume. Drink mode
+    /// needs all three, so it ends that session and starts its own.
+    private func endShowcaseSessionIfNeeded() async {
+        guard hermesVM.connectionState != .disconnected, !hermesVM.sessionUsesVision else { return }
+        hermesVM.endSession()
+        for _ in 0..<50 where hermesVM.connectionState != .disconnected {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
     }
 
     /// Microphone or speech recognition refused. The session still reaches
@@ -473,6 +485,7 @@ final class EmoDrinkViewModel {
         isStarting = true
         defer { isStarting = false }
         guard catalog != nil else { fail("The drink catalogue is missing from this build."); return }
+        await endShowcaseSessionIfNeeded()
 
         // A Stop during any await below ends the session; drink mode must
         // then stay off rather than come back on a dead session.

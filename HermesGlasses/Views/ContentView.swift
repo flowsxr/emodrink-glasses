@@ -202,16 +202,20 @@ struct LiveDrinkModeView: View {
     /// Spec section 4, moved by Ruling 3: with "Watch for vending
     /// machines" on, opening this screen starts the session and drink mode.
     private func autoStartIfNeeded() async {
-        guard !didAutoStart, onboardingComplete, emoDrinkVM.autoWatch,
-              hermesVM.connectionState == .disconnected else { return }
+        // A showcase session left up after Reset counts as no session:
+        // drink mode replaces it with one that has a camera.
+        guard !didAutoStart, onboardingComplete, emoDrinkVM.autoWatch, noLiveSession else { return }
         didAutoStart = true
         let genBefore = hermesVM.sessionGeneration
         await waitForGlassesIfPaired()
         guard !Task.isCancelled else { return }
         // A manual Start or Stop during the wait wins over the auto start.
-        guard hermesVM.connectionState == .disconnected,
-              hermesVM.sessionGeneration == genBefore else { return }
+        guard noLiveSession, hermesVM.sessionGeneration == genBefore else { return }
         await emoDrinkVM.start()
+    }
+
+    private var noLiveSession: Bool {
+        hermesVM.connectionState == .disconnected || !hermesVM.sessionUsesVision
     }
 
     /// The SDK discovers paired glasses a moment after launch; starting at
@@ -228,7 +232,9 @@ struct LiveDrinkModeView: View {
         }
     }
 
-    private var running: Bool { hermesVM.connectionState != .disconnected }
+    /// A showcase session left up after Reset is not live drink mode:
+    /// Start replaces it (EmoDrinkViewModel.start).
+    private var running: Bool { !noLiveSession }
     private var connecting: Bool { hermesVM.connectionState == .connecting }
 
     /// The Start button: `start()` starts the session, then drink mode,

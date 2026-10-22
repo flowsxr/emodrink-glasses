@@ -567,6 +567,14 @@ final class HermesSessionViewModel {
         await startSession(engagingBrain: true, vision: false)
     }
 
+    /// The showcase's mic switch: like `setMicSource(_:announceFallback: false)`,
+    /// but a failure goes to `reportIssue` (the run notice), not an alert.
+    func setMicSourceQuietly(_ target: MicSource, reportIssue: @escaping (String) -> Void) async -> Bool {
+        startIssueSink = reportIssue
+        defer { startIssueSink = nil }
+        return await setMicSource(target, announceFallback: false)
+    }
+
     /// While a showcase start runs, its problems go here instead of an alert.
     private var startIssueSink: ((String) -> Void)?
 
@@ -1090,7 +1098,7 @@ final class HermesSessionViewModel {
             reconcileLensHUD()
             return outcome
         } catch {
-            show("Mic switch failed: \(error.localizedDescription)")
+            startError("Mic switch failed: \(error.localizedDescription)")
             endSession()
             return .sessionEnded
         }
@@ -1211,7 +1219,7 @@ final class HermesSessionViewModel {
         pauseGlassesSpeech()
         micSource = .phone
         UserDefaults.standard.set(MicSource.phone.rawValue, forKey: Self.micSourceKey)
-        if announce { show(notice: Self.glassesSpeechFallbackNotice) }
+        if announce { startNotice(Self.glassesSpeechFallbackNotice) }
         if startRecognizer, speechAuthorized, connectionState != .disconnected {
             try? speechRecognizer.start()
         }
@@ -1229,7 +1237,7 @@ final class HermesSessionViewModel {
         guard displayHUDEnabled, glassesSessionRunning else { return }
         if lensBlockedByCallScreen {
             displayManager.deactivate()
-            show(notice: "Lens HUD paused - the glasses show their call screen while their hands-free mic is on. The iPhone or a headset mic keeps the HUD visible.")
+            startNotice("Lens HUD paused - the glasses show their call screen while their hands-free mic is on. The iPhone or a headset mic keeps the HUD visible.")
         } else if !displayManager.isActive {
             displayManager.activate()
         }

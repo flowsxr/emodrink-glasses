@@ -188,13 +188,14 @@ final class ShowcaseViewModel {
             enabled: hermesVM.glassesSpeechEnabled,
             glassesAvailable: hermesVM.glassesAvailable || hermesVM.isGlassesConnected,
             locale: hermesVM.glassesLink.glassesSpeechLocale, language: lang)
+        // Voice and lens only: no camera, so no camera prompt mid-run, and
+        // start-up problems (a mic switch included) become Taka's run
+        // notice instead of an alert.
+        var issues: [String] = []
         if !(glassesSpeech && hermesVM.micSource == .glassesSpeech && hermesVM.connectionState != .disconnected) {
-            _ = await hermesVM.setMicSource(glassesSpeech ? .glassesSpeech : .phone, announceFallback: false)
+            _ = await hermesVM.setMicSourceQuietly(glassesSpeech ? .glassesSpeech : .phone) { issues.append($0) }
         }
         guard gen == startGeneration else { return }
-        // Voice and lens only: no camera, so no camera prompt mid-run, and
-        // start-up problems become Taka's run notice instead of an alert.
-        var issues: [String] = []
         if hermesVM.connectionState == .disconnected {
             await hermesVM.startSessionWithoutVision { issues.append($0) }
         }
