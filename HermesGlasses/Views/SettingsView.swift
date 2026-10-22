@@ -152,7 +152,7 @@ private struct GlassesPage: View {
             cameraSection
             phoneModeSection
             HermesSection(header: "Developer",
-                          footer: "Glasses basics: the three on-device tests (lens card, camera feed, vending machine check) on the same glasses path EmoDrink uses. Local HTTP serves showcase clips from 127.0.0.1 instead of sending a file:// URI.") {
+                          footer: "Glasses basics: the three on-device tests (lens card, camera feed, vending machine check) on the same glasses path EmoDrink uses. Local HTTP serves showcase clips from 127.0.0.1 instead of sending a file:// URI. Meta speech (untested on hardware) lets the glasses transcribe the guest instead of the iPhone mic, when their language matches the run's.") {
                 Button {
                     showBasics = true
                 } label: {
@@ -182,6 +182,13 @@ private struct GlassesPage: View {
                 HermesDivider()
                 Toggle(isOn: $glassesSwipe) {
                     HermesRow("Showcase glasses swipe", icon: "hand.draw", mutedIcon: true, showsChevron: false)
+                }
+                .padding(.trailing, 16)
+                HermesDivider()
+                Toggle(isOn: Binding(get: { hermesVM.glassesSpeechEnabled },
+                                     set: { hermesVM.glassesSpeechEnabled = $0 })) {
+                    HermesRow("Showcase listens through the glasses (Meta speech)", icon: "waveform",
+                              mutedIcon: true, showsChevron: false)
                 }
                 .padding(.trailing, 16)
             }

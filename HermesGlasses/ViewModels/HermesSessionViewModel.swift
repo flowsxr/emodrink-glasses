@@ -7,6 +7,7 @@
 //
 
 import MWDATCore
+import MWDATSpeech
 import Observation
 import os
 import SwiftUI
@@ -111,11 +112,18 @@ final class HermesSessionViewModel {
     /// GlassesLink holds it, so the basics screen and Settings agree.
     var cameraPermissionGranted: Bool? { glassesLink.cameraPermissionGranted }
     /// Preferred microphone source; the banner chip shows the ACTUAL route
-    var micSource: MicSource = MicSource(
-        rawValue: UserDefaults.standard.string(
-            forKey: HermesSessionViewModel.micSourceKey
-        ) ?? ""
-    ) ?? .phone
+    var micSource: MicSource = HermesSessionViewModel.storedMicSource()
+    /// Developer setting `showcase_glasses_speech` (default off): the
+    /// glasses' own speech recognition may be the mic. Turning it off while
+    /// it is the mic hops back to the iPhone mic.
+    var glassesSpeechEnabled: Bool = GlassesSpeechRouting.isEnabled() {
+        didSet {
+            UserDefaults.standard.set(glassesSpeechEnabled, forKey: GlassesSpeechRouting.settingKey)
+            if !glassesSpeechEnabled, micSource == .glassesSpeech {
+                Task { @MainActor [weak self] in _ = await self?.setMicSource(.phone, announceFallback: false) }
+            }
+        }
+    }
     /// Glasses display HUD (Ray-Ban Display): live transcript, replies,
     /// status on the lens. Default on; harmless on non-display glasses.
     var displayHUDEnabled: Bool =
@@ -240,7 +248,30 @@ final class HermesSessionViewModel {
     private static let headsetMicFallbackNotice =
         "No headset mic found - using iPhone mic. Connect AirPods or another Bluetooth headset first."
 
+    private static let glassesSpeechFallbackNotice =
+        "Glasses speech not available - using iPhone mic"
+
     private static let micSourceKey = "mic_source"
+
+    /// The saved mic; glasses speech only while its Developer setting is on.
+    private static func storedMicSource() -> MicSource {
+        let stored = MicSource(rawValue: UserDefaults.standard.string(forKey: micSourceKey) ?? "") ?? .phone
+        return stored == .glassesSpeech && !GlassesSpeechRouting.isEnabled() ? .phone : stored
+    }
+
+    // MARK: Glasses speech state (MicSource.glassesSpeech)
+
+    /// This session hears through the glasses' speech recognition; the
+    /// on-device recognizer is not running.
+    @ObservationIgnored private var glassesSpeechInUse = false
+    /// The capability is attached and listening (not suspended).
+    @ObservationIgnored private var glassesSpeechRunning = false
+    /// Bumped by every start and stop: callbacks from an older capability
+    /// carry an older generation and are ignored.
+    @ObservationIgnored private var glassesSpeechGeneration = 0
+    /// SFSpeechRecognizer authorization, from session start: a fall back to
+    /// the iPhone mic starts the recognizer only when it may run.
+    @ObservationIgnored private var speechAuthorized = false
 
     // MARK: - Private
 
@@ -458,6 +489,12 @@ final class HermesSessionViewModel {
         glassesLink.observeSessionErrors("session") { [weak self] error in
             self?.handleSessionError(error)
         }
+        // Teardown of the glasses session drops the speech capability
+        // silently: hear through the iPhone again.
+        glassesLink.observeSession("glassesSpeech") { [weak self] state in
+            guard let self, self.glassesSpeechRunning, state != .started else { return }
+            self.fallBackFromGlassesSpeech("session \(state.map { $0.description } ?? "none")")
+        }
     }
 
     // MARK: - Public API
@@ -585,6 +622,7 @@ final class HermesSessionViewModel {
         applyLanguage(announceFallback: true)
         let speechOK = await speechRecognizer.requestAuthorization()
         guard gen == sessionGeneration else { return }
+        speechAuthorized = speechOK
         if !speechOK {
             show(HermesSpeechError.notAuthorized.localizedDescription)
         }
@@ -605,34 +643,12 @@ final class HermesSessionViewModel {
                 // Grace period: let the speaker's tail fade before the mic
                 // listens again, or the recognizer hears the end of the TTS
                 try? await Task.sleep(nanoseconds: Self.speechResumeGraceNanos)
-                self.speechRecognizer.isSuspended = false
+                self.setListeningSuspended(false)
             }
         }
 
         speechRecognizer.onPartial = { [weak self] text in
-            guard let self else { return }
-            if case .speaking = self.connectionState {
-                // Words while Hermes talks = barge-in, unless the glasses
-                // are hearing Hermes's own voice
-                guard !self.isEchoOfResponse(text) else { return }
-                self.liveTranscript = text
-                // A showcase run owns the lens: no listening screen over the deck.
-                if self.showcaseClaimer == nil { self.displayManager.showListening(partial: text) }
-                if text.split(separator: " ").count >= 2 {
-                    self.interruptSpeech()
-                }
-            } else {
-                self.liveTranscript = text
-                // A late partial can trail the finalized utterance - don't
-                // let it overwrite the Thinking screen on the lens
-                switch self.connectionState {
-                case .listening, .recording:
-                    // A showcase run owns the lens: no listening screen over the deck.
-                    if self.showcaseClaimer == nil { self.displayManager.showListening(partial: text) }
-                default:
-                    break
-                }
-            }
+            self?.heardPartial(text)
         }
         speechRecognizer.onFinal = { [weak self] text in
             self?.submitQuery(text)
@@ -653,7 +669,20 @@ final class HermesSessionViewModel {
             }
             if micSource == .glasses && !bluetoothActive { show(notice: Self.glassesMicFallbackNotice) }
             if micSource == .headset && !bluetoothActive { show(notice: Self.headsetMicFallbackNotice) }
-            if speechOK { try speechRecognizer.start() }
+            if micSource == .glassesSpeech {
+                // The glasses transcribe; the recognizer stays stopped.
+                let heard = await beginGlassesSpeech(sessionGen: gen)
+                guard gen == sessionGeneration else { return }
+                if !heard {
+                    // A failed capability start has already fallen back.
+                    if micSource == .glassesSpeech {
+                        fallBackFromGlassesSpeech("could not start", startRecognizer: false)
+                    }
+                    if speechOK { try speechRecognizer.start() }
+                }
+            } else if speechOK {
+                try speechRecognizer.start()
+            }
         } catch {
             guard gen == sessionGeneration else { return }
             show("Audio setup failed: \(error.localizedDescription)")
@@ -673,6 +702,34 @@ final class HermesSessionViewModel {
 
         // Mic live, recognizer running
         connectionState = .listening
+    }
+
+    /// A partial transcript from whichever source hears (the recognizer or
+    /// the glasses' speech): the live transcript on the phone, the
+    /// listening screen on the lens, barge-in while Hermes speaks.
+    private func heardPartial(_ text: String) {
+        if case .speaking = connectionState {
+            // Words while Hermes talks = barge-in, unless the glasses
+            // are hearing Hermes's own voice
+            guard !isEchoOfResponse(text) else { return }
+            liveTranscript = text
+            // A showcase run owns the lens: no listening screen over the deck.
+            if showcaseClaimer == nil { displayManager.showListening(partial: text) }
+            if text.split(separator: " ").count >= 2 {
+                interruptSpeech()
+            }
+        } else {
+            liveTranscript = text
+            // A late partial can trail the finalized utterance - don't
+            // let it overwrite the Thinking screen on the lens
+            switch connectionState {
+            case .listening, .recording:
+                // A showcase run owns the lens: no listening screen over the deck.
+                if showcaseClaimer == nil { displayManager.showListening(partial: text) }
+            default:
+                break
+            }
+        }
     }
 
     /// Send finalized text to the active brain and move the UI into processing
@@ -715,7 +772,7 @@ final class HermesSessionViewModel {
         lastTranscript = trimmed
         connectionState = .processing
         displayManager.showThinking(query: trimmed)
-        speechRecognizer.isSuspended = true
+        setListeningSuspended(true)
         Task { await askDirect(trimmed, context: context) }
     }
 
@@ -752,7 +809,7 @@ final class HermesSessionViewModel {
         } catch {
             show(error.localizedDescription)
             connectionState = .listening
-            speechRecognizer.isSuspended = false
+            setListeningSuspended(false)
             displayManager.clear()
         }
     }
@@ -816,13 +873,13 @@ final class HermesSessionViewModel {
             displayManager.showReply(text: shown, speaking: false,
                                      dwellSeconds: HermesDisplayLogic.readingDwellSeconds(charCount: shown.count))
             connectionState = .listening
-            speechRecognizer.isSuspended = false
+            setListeningSuspended(false)
         } else {
             connectionState = .speaking
             displayManager.showReply(text: shown, speaking: true, dwellSeconds: nil)
             speechSynthesizer.speak(text)
             // Bluetooth mic: the speaker is not the mic, so keep listening.
-            if audioManager.isUsingBluetoothInput { speechRecognizer.isSuspended = false }
+            if audioManager.isUsingBluetoothInput { setListeningSuspended(false) }
         }
     }
 
@@ -940,7 +997,11 @@ final class HermesSessionViewModel {
         }
     }
 
-    var availableMicSources: [MicSource] { MicSource.allCases }
+    /// Glasses speech is offered (Settings picker, tap-to-switch) only while
+    /// its Developer setting is on.
+    var availableMicSources: [MicSource] {
+        MicSource.allCases.filter { $0 != .glassesSpeech || glassesSpeechEnabled }
+    }
 
     /// Next source that actually takes; HFP ports only appear once the
     /// session is active, so the cycle tries each in turn.
@@ -963,12 +1024,23 @@ final class HermesSessionViewModel {
     }
 
     private func switchMicSource(_ target: MicSource, announceFallback: Bool) async -> MicSwitchOutcome {
+        if target == .glassesSpeech, !glassesSpeechEnabled { return .routeUnavailable }
         micSource = target
         UserDefaults.standard.set(target.rawValue, forKey: Self.micSourceKey)
         guard connectionState != .disconnected else { return .took }
+        // Leaving glasses speech: the recognizer takes over once the mic opens.
+        let leftGlassesSpeech = glassesSpeechInUse && target != .glassesSpeech
+        if leftGlassesSpeech {
+            glassesSpeechInUse = false
+            pauseGlassesSpeech()
+        }
         audioManager.stopCapture()
         do {
             let bluetoothActive = try await audioManager.startCapture(route: target.captureRoute)
+            if target == .glassesSpeech {
+                return await switchToGlassesSpeech(announceFallback: announceFallback)
+            }
+            if leftGlassesSpeech, speechAuthorized { try? speechRecognizer.start() }
             let outcome: MicSwitchOutcome = (bluetoothActive || target == .phone) ? .took : .routeUnavailable
             speechRecognizer.restartCycle()
             if announceFallback, target == .glasses, !bluetoothActive { show(notice: Self.glassesMicFallbackNotice) }
@@ -983,6 +1055,120 @@ final class HermesSessionViewModel {
             show("Mic switch failed: \(error.localizedDescription)")
             endSession()
             return .sessionEnded
+        }
+    }
+
+    /// The mic (iPhone route) is open again: hand transcription to the
+    /// glasses, or fall back to the iPhone mic when they cannot take it.
+    private func switchToGlassesSpeech(announceFallback: Bool) async -> MicSwitchOutcome {
+        let gen = sessionGeneration
+        if !glassesSpeechInUse {
+            speechRecognizer.stop()
+            let heard = await beginGlassesSpeech(sessionGen: gen)
+            guard gen == sessionGeneration else { return .sessionEnded }
+            if !heard {
+                // A failed capability start has already fallen back.
+                if micSource == .glassesSpeech {
+                    fallBackFromGlassesSpeech("could not start", announce: announceFallback)
+                }
+                reconcileLensHUD()
+                return .routeUnavailable
+            }
+        }
+        reconcileLensHUD()
+        return .took
+    }
+
+    // MARK: Glasses speech (MicSource.glassesSpeech)
+
+    /// Suspend or resume listening, whichever source hears: the recognizer
+    /// always follows (it stays stopped while the glasses hear, but keeps
+    /// the flag for a fall back); the glasses' capability is stopped while
+    /// suspended and started again on resume.
+    private func setListeningSuspended(_ suspended: Bool) {
+        speechRecognizer.isSuspended = suspended
+        guard glassesSpeechInUse else { return }
+        if suspended { pauseGlassesSpeech() } else if !glassesSpeechRunning { resumeGlassesSpeech() }
+    }
+
+    /// Hear through the glasses for this session. False when they cannot:
+    /// setting off, a locale known not to match the session's language, no
+    /// glasses session, or the capability refused. Starts listening at once
+    /// unless listening is suspended (resume starts it).
+    private func beginGlassesSpeech(sessionGen: Int) async -> Bool {
+        guard glassesSpeechEnabled else { return false }
+        guard GlassesSpeechRouting.locale(glassesLink.glassesSpeechLocale, matches: activeLanguage) != false else {
+            NSLog("[EmoDrink] glasses speech locale \(glassesLink.glassesSpeechLocale ?? "-") does not hear \(activeLanguage.rawValue)")
+            return false
+        }
+        guard await glassesLink.ensureSession(timeout: 8), sessionGen == sessionGeneration else { return false }
+        glassesSpeechInUse = true
+        if speechRecognizer.isSuspended { return true }
+        return resumeGlassesSpeech()
+    }
+
+    /// Start (again) the glasses' capability. A failure falls back to the
+    /// iPhone mic.
+    @discardableResult
+    private func resumeGlassesSpeech() -> Bool {
+        guard glassesSpeechInUse else { return false }
+        glassesSpeechGeneration += 1
+        let gen = glassesSpeechGeneration
+        let started = glassesLink.startGlassesSpeech(
+            onText: { [weak self] text, isFinal in self?.glassesSpeechHeard(text, isFinal: isFinal, gen) },
+            onError: { [weak self] error in self?.glassesSpeechFailed(error, gen) },
+            onLocale: { [weak self] _ in self?.checkGlassesSpeechLocale(gen) }
+        )
+        guard started else {
+            fallBackFromGlassesSpeech("capability did not start")
+            return false
+        }
+        glassesSpeechRunning = true
+        checkGlassesSpeechLocale(gen)
+        return glassesSpeechRunning
+    }
+
+    /// Stop the glasses' capability (suspension, a switch, the session's
+    /// end). Callbacks still in flight see a newer generation.
+    private func pauseGlassesSpeech() {
+        glassesSpeechGeneration += 1
+        guard glassesSpeechRunning else { return }
+        glassesSpeechRunning = false
+        glassesLink.stopGlassesSpeech()
+    }
+
+    private func glassesSpeechHeard(_ text: String, isFinal: Bool, _ gen: Int) {
+        guard gen == glassesSpeechGeneration, glassesSpeechRunning else { return }
+        if isFinal { submitQuery(text) } else { heardPartial(text) }
+    }
+
+    private func glassesSpeechFailed(_ error: SpeechError, _ gen: Int) {
+        guard gen == glassesSpeechGeneration, glassesSpeechInUse else { return }
+        // A second start on a capability already listening is harmless.
+        if error == .alreadyListening { return }
+        fallBackFromGlassesSpeech("error \(error)")
+    }
+
+    /// The glasses hear another language than the session speaks: useless,
+    /// so the iPhone mic takes over.
+    private func checkGlassesSpeechLocale(_ gen: Int) {
+        guard gen == glassesSpeechGeneration, glassesSpeechInUse,
+              GlassesSpeechRouting.locale(glassesLink.glassesSpeechLocale, matches: activeLanguage) == false
+        else { return }
+        fallBackFromGlassesSpeech("locale \(glassesLink.glassesSpeechLocale ?? "-") is not \(activeLanguage.rawValue)")
+    }
+
+    /// Back to the iPhone mic, as the other mic fallbacks do: the saved
+    /// source becomes `.phone` and (mid-session) the recognizer starts.
+    private func fallBackFromGlassesSpeech(_ reason: String, announce: Bool = true, startRecognizer: Bool = true) {
+        NSLog("[EmoDrink] glasses speech -> iPhone mic: \(reason)")
+        glassesSpeechInUse = false
+        pauseGlassesSpeech()
+        micSource = .phone
+        UserDefaults.standard.set(MicSource.phone.rawValue, forKey: Self.micSourceKey)
+        if announce { show(notice: Self.glassesSpeechFallbackNotice) }
+        if startRecognizer, speechAuthorized, connectionState != .disconnected {
+            try? speechRecognizer.start()
         }
     }
 
@@ -1016,7 +1202,7 @@ final class HermesSessionViewModel {
         switch connectionState {
         case .listening:
             connectionState = .speaking
-            speechRecognizer.isSuspended = true
+            setListeningSuspended(true)
             speechSynthesizer.speak(text)
         case .disconnected:
             speechSynthesizer.speak(text)
@@ -1048,7 +1234,7 @@ final class HermesSessionViewModel {
         switch connectionState {
         case .listening:
             connectionState = .speaking
-            speechRecognizer.isSuspended = true
+            setListeningSuspended(true)
         case .speaking, .disconnected:
             break
         default:
@@ -1129,7 +1315,7 @@ final class HermesSessionViewModel {
                 try? await Task.sleep(nanoseconds: Self.speechResumeGraceNanos)
                 // A cue that started during the grace owns the suspension.
                 if case .speaking = self.connectionState { return }
-                self.speechRecognizer.isSuspended = false
+                self.setListeningSuspended(false)
             }
         }
     }
@@ -1179,6 +1365,8 @@ final class HermesSessionViewModel {
         speechFinishGate.reset()
         speechSynthesizer.stop()
         speechRecognizer.stop()
+        glassesSpeechInUse = false
+        pauseGlassesSpeech()
         displayManager.deactivate()
         displayStatus = .off
         contextProvider.stop()

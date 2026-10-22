@@ -24,12 +24,17 @@ enum MicSource: String, CaseIterable {
     case phone
     case glasses
     case headset
+    /// The glasses' own speech recognition (MWDATSpeech): text over the DAT
+    /// session, no hands-free link, so no call screen. Developer setting
+    /// `showcase_glasses_speech` only (`GlassesSpeechRouting`).
+    case glassesSpeech
 
     var label: String {
         switch self {
         case .phone: return "iPhone Mic"
         case .glasses: return "Glasses Mic (call screen)"
         case .headset: return "Headset Mic (AirPods etc.)"
+        case .glassesSpeech: return "Glasses (Meta speech)"
         }
     }
 
@@ -40,6 +45,7 @@ enum MicSource: String, CaseIterable {
         case .phone: return "iPhone"
         case .glasses: return "Glasses"
         case .headset: return "Headset"
+        case .glassesSpeech: return "Meta speech"
         }
     }
 
@@ -48,6 +54,9 @@ enum MicSource: String, CaseIterable {
         case .phone: return .phoneMic
         case .glasses: return .glassesMic
         case .headset: return .headsetMic
+        // Transcripts come over the DAT session; the audio session (TTS
+        // playback) stays on the iPhone route so no hands-free link opens.
+        case .glassesSpeech: return .phoneMic
         }
     }
 }

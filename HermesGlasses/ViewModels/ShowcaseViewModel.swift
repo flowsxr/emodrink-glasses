@@ -3,7 +3,8 @@
 //
 // Taka's Start button. Owns the showcase settings (machines, the selected
 // machine, the guest's morning, the language), pre-renders the clips a run
-// needs, prepares the session (language, iPhone mic) and wires a
+// needs, prepares the session (language, iPhone mic or the
+// glasses' own speech behind `showcase_glasses_speech`) and wires a
 // ShowcaseRunner to the real lens (HermesDisplayManager through the session
 // view model), the voice (speakCueAndWait) and the AI (a 6 s one-shot call).
 //
@@ -178,7 +179,16 @@ final class ShowcaseViewModel {
             guard gen == startGeneration else { return }
         }
 
-        _ = await hermesVM.setMicSource(.phone, announceFallback: false)
+        // The iPhone mic, unless the Developer setting lets the glasses'
+        // own speech hear the run (its locale is checked again once the
+        // capability reports one; a mismatch or error falls back).
+        let glassesSpeech = GlassesSpeechRouting.showcaseUsesGlassesSpeech(
+            enabled: hermesVM.glassesSpeechEnabled,
+            glassesAvailable: hermesVM.glassesAvailable || hermesVM.isGlassesConnected,
+            locale: hermesVM.glassesLink.glassesSpeechLocale, language: lang)
+        if !(glassesSpeech && hermesVM.micSource == .glassesSpeech && hermesVM.connectionState != .disconnected) {
+            _ = await hermesVM.setMicSource(glassesSpeech ? .glassesSpeech : .phone, announceFallback: false)
+        }
         guard gen == startGeneration else { return }
         if hermesVM.connectionState == .disconnected { await hermesVM.startSession() }
         guard gen == startGeneration else { return }

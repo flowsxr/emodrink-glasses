@@ -936,11 +936,20 @@ final class GlassesLink {
 
     // MARK: - Glasses speech and inputs (showcase spikes)
 
-    /// Showcase spike: the glasses' own speech recognition. Needs a started
-    /// session (`ensureSession()` first). `onText` gets each transcript and
-    /// whether it is final. Returns false when it could not start.
+    /// The glasses' speech locale ("en-US"), as last reported by the
+    /// capability or its locale publisher. Kept after the capability stops,
+    /// so the next start can be decided on it; nil until speech first ran.
+    private(set) var glassesSpeechLocale: String?
+
+    /// The glasses' own speech recognition (spike and `MicSource
+    /// .glassesSpeech`). Needs a started session (`ensureSession()` first).
+    /// `onText` gets each transcript and whether it is final; `onError` each
+    /// SpeechError; `onLocale` each locale the capability reports. Returns
+    /// false when it could not start.
     @discardableResult
-    func startGlassesSpeech(onText: @escaping @MainActor (String, Bool) -> Void) -> Bool {
+    func startGlassesSpeech(onText: @escaping @MainActor (String, Bool) -> Void,
+                            onError: (@MainActor (SpeechError) -> Void)? = nil,
+                            onLocale: (@MainActor (String) -> Void)? = nil) -> Bool {
         guard let session = deviceSession, session.state == .started else {
             add("startGlassesSpeech: no started session (\(sessionStateText))")
             return false
@@ -960,9 +969,20 @@ final class GlassesLink {
                 Task { @MainActor in self?.add("speech state: \(state.description)") }
             }.store(in: speechTokenBag)
             capability.errorPublisher.listen { [weak self] error in
-                Task { @MainActor in self?.add("speech ERROR: \(error.localizedDescription) [\(error)]") }
+                Task { @MainActor in
+                    self?.add("speech ERROR: \(error.localizedDescription) [\(error)]")
+                    onError?(error)
+                }
             }.store(in: speechTokenBag)
-            add("addSpeech OK; speech.start()")
+            capability.localePublisher.listen { [weak self] locale in
+                Task { @MainActor in
+                    self?.add("speech locale: \(locale)")
+                    self?.glassesSpeechLocale = locale
+                    onLocale?(locale)
+                }
+            }.store(in: speechTokenBag)
+            if let locale = capability.locale { glassesSpeechLocale = locale }
+            add("addSpeech OK (locale \(glassesSpeechLocale ?? "unknown")); speech.start()")
             capability.start()
             return true
         } catch {

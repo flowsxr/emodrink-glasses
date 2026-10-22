@@ -51,6 +51,7 @@
 		AAAA00000000000000000F51 /* LensArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F52 /* LensArt.swift */; };
 		AAAA00000000000000000F60 /* ClipArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F61 /* ClipArt.swift */; };
 		AAAA00000000000000000835 /* VisionRouting.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000836 /* VisionRouting.swift */; };
+		AAAA00000000000000000F7A /* GlassesSpeechRouting.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F7B /* GlassesSpeechRouting.swift */; };
 		AAAA00000000000000000841 /* ChoiceDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000842 /* ChoiceDetector.swift */; };
 		AAAA00000000000000000A63 /* EmoDrink/ChangeGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000A64 /* EmoDrink/ChangeGate.swift */; };
 		AAAA00000000000000000E01 /* EmoDrink/PhysiologySnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E02 /* EmoDrink/PhysiologySnapshot.swift */; };
@@ -146,6 +147,7 @@
 		AAAA00000000000000000F52 /* LensArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/LensArt.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F61 /* ClipArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/ClipArt.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000836 /* VisionRouting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionRouting.swift; sourceTree = "<group>"; };
+		AAAA00000000000000000F7B /* GlassesSpeechRouting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassesSpeechRouting.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000842 /* ChoiceDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChoiceDetector.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000A64 /* EmoDrink/ChangeGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/ChangeGate.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E02 /* EmoDrink/PhysiologySnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/PhysiologySnapshot.swift; sourceTree = "<group>"; };
@@ -291,6 +293,7 @@
 				AAAA00000000000000000842 /* ChoiceDetector.swift */,
 				AAAA00000000000000000824 /* VisionSource.swift */,
 				AAAA00000000000000000836 /* VisionRouting.swift */,
+				AAAA00000000000000000F7B /* GlassesSpeechRouting.swift */,
 				AAAA00000000000000000826 /* PhoneCameraManager.swift */,
 				AAAA00000000000000000828 /* PermissionsCoordinator.swift */,
 				AAAA00000000000000000A64 /* EmoDrink/ChangeGate.swift */,
@@ -452,6 +455,7 @@
 				AAAA00000000000000000E2C /* HermesSessionViewModel+Glasses.swift in Sources */,
 				AAAA00000000000000000823 /* VisionSource.swift in Sources */,
 				AAAA00000000000000000835 /* VisionRouting.swift in Sources */,
+				AAAA00000000000000000F7A /* GlassesSpeechRouting.swift in Sources */,
 				AAAA00000000000000000825 /* PhoneCameraManager.swift in Sources */,
 				AAAA00000000000000000827 /* PermissionsCoordinator.swift in Sources */,
 				AAAA00000000000000000829 /* OnboardingView.swift in Sources */,
