@@ -52,6 +52,41 @@ through Beta App Review (usually under a day), then the invite email goes
 out. The tester installs TestFlight, accepts the invite and installs
 EmoDrink.
 
+## Handover to Taka
+
+1. In `HermesGlasses/Services/Showcase/ShowcaseDirector.swift` set
+   `ShowcaseDefaults.defaultLanguage = .ja`.
+2. Bump the build number.
+3. `tools/release.sh <n>`, then add the build to the Gift group.
+
+## Before a demo
+
+- Grant microphone, speech and the Meta permissions once, in onboarding.
+- Open the app once beforehand so the clips pre-render (they are cached per
+  machine, guest and language; a change re-renders them).
+- Check the glasses display with Settings › Glasses › Developer › Test lens.
+
+## Owner device checks
+
+Not yet done on a device; the build was written without glasses.
+
+- **Showcase spikes panel** (Settings › Glasses › Developer › Showcase
+  spikes): video by file and by http, card latency, and glasses speech.
+  Record which clip transport plays and set `showcase_clip_transport` to it.
+- **Swipe directions:** they are guessed from SDK names; flip them in
+  `GlassesNav.from` if reversed.
+- **Glasses speech and the call screen:** confirm there is no call screen,
+  finals arrive once per utterance, and note the locale the glasses report.
+  Only then turn `showcase_glasses_speech` on (it is off by default).
+- **Card layout with the buttons:** the card image against the buttons on the
+  lens (possibly needs `.flexGrow`); clip render time on the phone.
+- **New drinks:** the Japanese spellings, caffeine and sugar of the added
+  drinks are best-effort (the Asahi site blocked fetches); check them against
+  the labels.
+- **Rehearsals:** English with the sample machine; Japanese with a machine
+  added by voice; and glasses off mid-run (the run continues on the phone).
+  Note any text under 24 px or any stutter.
+
 ## Glasses for the tester
 
 Until the Meta project is published, the tester's glasses need

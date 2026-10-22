@@ -2,13 +2,15 @@
 
 A standalone, MIT-licensed project. See README.md for architecture and setup.
 
-## Current state (2026-10-08)
+## Current state (2026-10-22)
 
-EmoDrink is the whole app: one screen that starts watching for a vending
-machine on open, three drinks on the lens, Japanese or English speech both
-ways. Voice loop: on-device STT, `DirectClient` to the provider, Gemini
-cloud TTS with the on-device voice as fallback. Vision: the Ray-Ban camera through DAT, or the iPhone camera in phone
-mode.
+The app opens on the SHOWCASE home: pick the machine, the guest and the
+language, press Start, Reset for the next guest. Live drink mode (the original
+one-screen app: starts watching for a vending machine, three drinks on the
+lens) is one row away on that home. Japanese or English speech both ways.
+Voice loop: on-device STT, `DirectClient` to the provider, Gemini cloud TTS
+with the on-device voice as fallback. Vision: the Ray-Ban camera through DAT,
+or the iPhone camera in phone mode.
 
 ## Key facts that are easy to get wrong
 
@@ -160,9 +162,11 @@ mode.
   (`startSession`) and `unpinVisionRoute` on teardown. Without this, a momentary SDK flap redirected a
   capture to a camera that wasn't running.
 - **The visual language lives in `Views/HermesDesign.swift`**. ONE accent -
-  terracotta `#C4622D` and its shades; warm neutrals (cream `#F7F5F2`
-  canvas, warm black `#1C1B1A`), never stock iOS greys or per-row rainbow
-  icons. Build screens out of the primitives there (`HermesSection`,
+  deep blue `#1446A0` (`accentDeep` `#0D2F75`, `accentLight` `#7FA6E8`);
+  cool neutrals (ink `#0F1B33`, `inkSoft` `#5C6B85`, canvas `#F4F7FB`,
+  card white, dark canvas `#0B1529`), never stock iOS greys or per-row
+  rainbow icons. (It was terracotta once; that is gone.) Build screens out of
+  the primitives there (`HermesSection`,
   `HermesCard`, `HermesRow`, `HermesIconTile`, `HermesChip`,
   `HermesStatusPill`, `HermesDeviceCard`, `HermesScrollPage`) rather than
   re-styling a `List`; pages that keep a stock `Form` (Language and
@@ -179,6 +183,51 @@ mode.
 - **Project files: `tools/pbx-register.py`** adds a new file's four pbxproj
   entries; **`tools/pbx-unregister.py <basename> ...`** removes every entry for a
   deleted one (never hand-edit the pbxproj for a deletion).
+- **Showcase: runner and view model.** `ShowcaseRunner`
+  (`Services/Showcase/`) is PURE: time and side effects come in as injected
+  `ShowcaseEffects` and `ShowcaseClock`, which is how `tests/showcase-runner`
+  drives a whole run without a device. `ShowcaseViewModel` is owned by the
+  App struct (like `EmoDrinkViewModel`) and borrows the session through hooks.
+- **Showcase picks are machine-only and the hour is pinned to 9.** Drinks come
+  from the chosen machine's list, never the whole catalogue, and the
+  recommender runs with the hour fixed at 9 so a demo at 15:00 still reads as
+  a morning. `ShowcaseDefaults.defaultLanguage` (in `ShowcaseDirector.swift`)
+  is the handover switch: `.ja` for Taka's build (see docs/RELEASE.md).
+- **Lens art is 600x600 with a 24 px text minimum, and colour comes from
+  images and video.** The lens text path has only two colours, so anything
+  coloured (drink art, the morning ring) is a rendered image or clip.
+  `minimumScaleFactor` that lets text fall under 24 px is a bug.
+- **Clips are pre-rendered and cached.** `ClipRenderer` runs whenever the
+  machine, profile or language changes (the cache key covers every input) and
+  is awaited on Start ("Preparing" on the phone). `showcase_clip_transport`
+  is `file` (default, `file://` URIs) or `http` (the local server from the
+  spikes); flip it if the glasses can't read the file.
+- **One display queue carries cards AND clips.** `HermesDisplayManager`'s
+  serialized queue sends both, and `stopVideo` runs before a card replaces a
+  clip. Bypassing the queue is how a card ended up under a playing clip.
+- **The showcase session has no vision and no context.** It starts through
+  `startSessionWithoutVision` (no camera prompt mid-run, no device-context
+  fetch), and its problems go to `runNotice`, never alerts. Live drink mode
+  REPLACES such a session (it does not inherit it); Settings is locked during
+  a run.
+- **`showcaseClaimer` claims EVERY utterance during a run**, before
+  `emoDrinkClaimer`; the runner answers through the one-shot AI so the normal
+  assistant card never replaces the deck. The guest cannot reach the general
+  assistant mid-demo (intended).
+- **`SpeechFinishGate` guards stale finishes** of the speech synthesizer, so a
+  cancelled line's finish callback cannot advance the next step.
+- **Glasses input is two settings.** Swipe (`showcase_glasses_swipe`, default
+  ON, harmless if no events arrive) maps via `GlassesNav.from`; the directions
+  are guessed from SDK names, flip them there if reversed. Glasses speech
+  (`MicSource.glassesSpeech`, `showcase_glasses_speech`, default OFF) stays
+  off until proven on device: the glasses mic is HFP and the firmware may
+  show the call screen over the lens.
+- **Catalogue aliases: bare brand words belong to the flagship only**
+  ("Calpis" is Calpis Water; siblings get brand + variant aliases; no generic
+  category aliases). `tests/emodrink-catalog` enforces it.
+- **`DrinkNameMatcher.matchAll` protects と.** Guests join drinks with と,
+  but a catalogue key can contain it (ほっと十六茶), so a と inside a known key
+  is kept and only the others split.
 - **EmoDrink:** the pick is on-device (`DrinkRecommender`, pure, tested) and
   the AI only phrases and converses. `EmoDrinkViewModel` is owned by the App
   struct and borrows the session through hooks (`emoDrinkClaimer`,
@@ -229,6 +278,9 @@ xcodebuild -project HermesGlasses.xcodeproj -scheme HermesGlasses \
 
 ### Two traps in the standalone test suites
 
+- **Two suites have no command in their header** (`tests/device-context`,
+  `tests/display-logic`): compile `Services/DeviceContextFormatter.swift` and
+  `Services/HermesDisplayLogic.swift` with their `main.swift` respectively.
 - **`tests/*/main.swift` end in `print(...)` then `exit(...)`.** New assertions
   must be INSERTED ABOVE those two lines. Appended to the bottom they sit
   after `exit()`, never run, and the suite still reports all-green - so the

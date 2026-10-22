@@ -27,6 +27,17 @@ lives on in the Hermes Glasses repo.
 </p>
 <p align="center"><em>Left: first run on the glasses, the stage showing the Ray-Ban Display camera live while the lens offers three drinks. Right: the home before Start. A video at a real machine in Singapore is coming.</em></p>
 
+## Showcase
+
+The app opens on the showcase home, built for demos. Taka picks the vending
+machine, the guest (a morning profile) and the language, then presses
+**Start**: the glasses walk the guest through the morning, the three drinks
+and the pick, with spoken lines both ways. **Reset** gets it ready for the
+next guest. Add machines by voice ("add a machine" and read out the drinks) or
+from the machine list. Live drink mode, which watches for a real vending
+machine, is one row below on the same home. Before a demo, see "Before a
+demo" in [docs/RELEASE.md](docs/RELEASE.md).
+
 ## First ten minutes
 
 1. **Install.** Build from Xcode onto the iPhone, or install the TestFlight
@@ -49,8 +60,8 @@ lives on in the Hermes Glasses repo.
    recognition (to pick by voice), camera (to see the machine), Bluetooth and
    local network (to reach the glasses), and location and motion (device
    context for the assistant: where you are, the weather, walking or still).
-5. **Start watching.** Tap **Start** on the home screen (it also starts by
-   itself when the app opens). The lens shows "Drink mode", "Watching for a
+5. **Start watching.** Open **Live drink mode** from the home screen (it
+   starts by itself when that screen appears). The lens shows "Drink mode", "Watching for a
    vending machine" and a hint to say "what should I drink" /
    「何を飲めばいい」. At a machine it shows three numbered drinks; pick one by
    tap, number or name, then "Why" / 「なぜ」 or "Thanks" / 「ありがとう」.
@@ -68,9 +79,9 @@ lives on in the Hermes Glasses repo.
 
 ## What it does
 
-- **Opens watching.** The app starts the session and drink mode by itself
-  ("Watch for vending machines when the app opens", Settings › Drinks, on by
-  default). A frame goes to the vision provider only when the scene changes
+- **Watches in live drink mode.** Opening Live drink mode starts the session
+  and drink mode by itself ("Watch for vending machines when the app opens",
+  Settings › Drinks, on by default); the app itself opens on the showcase home. A frame goes to the vision provider only when the scene changes
   and settles (at most 150 small calls an hour), with one yes or no
   question: is there a vending machine? "Check now" asks at once.
 - **Reads your morning.** Last night's sleep hours and score, HRV and
@@ -165,7 +176,7 @@ covered in [docs/RELEASE.md](docs/RELEASE.md).
   (the implementation plan lives beside it locally; `docs/superpowers/plans` is gitignored, as in Hermes)
 
 Tests: the EmoDrink units are pure Swift with standalone suites under
-`tests/emodrink-*` (compile lines in each `main.swift`).
+`tests/emodrink-*` and `tests/showcase-*` (compile lines in each `main.swift`).
 
 ---
 
