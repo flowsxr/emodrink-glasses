@@ -410,6 +410,7 @@ final class HermesSessionViewModel {
         devices=\(wearables.devices.count) [\(links)] \
         glassesAvailable=\(glassesAvailable) route=\(visionRoute) \
         pref=\(phoneModePreference.rawValue) phoneModeActive=\(phoneModeActive) \
+        sessionVision=\(sessionUsesVision) phoneStream=\(phoneCameraManager.isStreaming) \
         linkSession=\(glassesLink.sessionStateText) linkDisplay=\(glassesLink.displayStateText) \
         connection=\(connectionState) mic=\(micSource.rawValue) \
         display=\(displayStatus) hudEnabled=\(displayHUDEnabled) \
@@ -423,6 +424,9 @@ final class HermesSessionViewModel {
 
     /// True while a phone-mode session is running - drives the 5b screen.
     var phoneModeActive: Bool = false
+    /// False for the showcase's session (`startSessionWithoutVision`): no
+    /// camera is opened or resumed while it runs.
+    private(set) var sessionUsesVision = true
 
     /// Set when the phone camera could not start (permission, hardware).
     /// The session still runs; only visual queries are affected.
@@ -514,7 +518,7 @@ final class HermesSessionViewModel {
         guard connectionState == .disconnected || connectionState == .connecting else { return activeLanguage }
         var language = EmoDrinkLanguage.resolved
         if !speechRecognizer.setLocale(language.sttLocale) {
-            if language == .ja && announceFallback { show(notice: EmoDrinkLanguage.sttFallbackNotice) }
+            if language == .ja && announceFallback { startNotice(EmoDrinkLanguage.sttFallbackNotice) }
             language = .en
             speechRecognizer.setLocale(Language.en.sttLocale)
         }
@@ -548,20 +552,47 @@ final class HermesSessionViewModel {
         await startSession(engagingBrain: true)
     }
 
-    private func startSession(engagingBrain: Bool) async {
+    /// The showcase's session: voice and the lens, never a camera. No
+    /// iPhone capture session, no glasses camera check, no "using this
+    /// iPhone as the eye" notice, and the phone stream is not resumed in
+    /// front (`resumePhoneVisionIfNeeded`). The glasses DISPLAY still
+    /// attaches when glasses are reachable; otherwise the run plays on the
+    /// simulated lens. Problems that would raise the error or notice alert
+    /// go to `reportIssue` instead (Taka's run notice).
+    func startSessionWithoutVision(reportIssue: @escaping (String) -> Void) async {
+        startIssueSink = reportIssue
+        defer { startIssueSink = nil }
+        await startSession(engagingBrain: true, vision: false)
+    }
+
+    /// While a showcase start runs, its problems go here instead of an alert.
+    private var startIssueSink: ((String) -> Void)?
+
+    /// The error alert, or the showcase's run notice during its start.
+    private func startError(_ message: String) {
+        if let sink = startIssueSink { sink(message) } else { show(message) }
+    }
+
+    /// The notice alert, or the showcase's run notice during its start.
+    private func startNotice(_ message: String, action: NoticeAction? = nil) {
+        if let sink = startIssueSink { sink(message) } else { show(notice: message, action: action) }
+    }
+
+    private func startSession(engagingBrain: Bool, vision: Bool = true) async {
         // A Stop (endSession) while any await below is pending bumps the
         // generation; every resume checks it and leaves the session down.
         let gen = sessionGeneration
         connectionState = .connecting
+        sessionUsesVision = vision
 
-        logVisionDiagnostics("startSession")
+        logVisionDiagnostics(vision ? "startSession" : "startSession (no vision)")
         // Resolved now, after any launch wait for the SDK to discover the
         // glasses, and pinned below for the whole session.
         var route = visionRoute
 
         if route == .glasses {
             glassesConnectIssue = nil
-            let connected = await connectGlassesSession()
+            let connected = await connectGlassesSession(checkCamera: vision)
             guard gen == sessionGeneration else {
                 // Stopped while connecting: no phone fallback, no notice.
                 // GlassesLink keeps its session for the next start.
@@ -575,12 +606,15 @@ final class HermesSessionViewModel {
                 let issue = glassesConnectIssue
                 glassesConnectIssue = nil
                 NSLog("[EmoDrink] glasses connect failed: \(issue?.message ?? "no reason from the SDK")")
-                guard VisionRouting.mayFallBackToPhone(preference: phoneModePreference) else {
+                if !vision {
+                    // No camera to fall back to: the run plays on the
+                    // simulated lens, whatever the phone-mode preference.
+                    if let issue { startNotice(issue.message, action: issue.action) }
+                } else if !VisionRouting.mayFallBackToPhone(preference: phoneModePreference) {
                     if let issue { show(notice: issue.message, action: issue.action) }
                     connectionState = .disconnected
                     return
-                }
-                if let issue {
+                } else if let issue {
                     show(notice: "\(issue.message) Using this iPhone as the eye for now.", action: issue.action)
                 } else {
                     show(notice: "Glasses unreachable - using this iPhone as the eye.")
@@ -592,7 +626,7 @@ final class HermesSessionViewModel {
         pinVisionRoute(route)
         phoneModeActive = route == .phone
 
-        if route == .phone {
+        if route == .phone && vision {
             // No DeviceSession, no display attach - the phone is the eye and
             // the lens is simulated on screen (design 5b).
             await startPhoneVision()
@@ -612,7 +646,7 @@ final class HermesSessionViewModel {
         // session skips this: nothing it captures is ever sent anywhere.
         if engagingBrain {
             guard !directProvider.requiresKey || DirectClient.hasKey(for: directProvider.id) else {
-                show("No API key set for \(directProvider.displayName). Add one in Settings.")
+                startError("No API key set for \(directProvider.displayName). Add one in Settings.")
                 endSession()
                 startFailedGeneration = sessionGeneration
                 return
@@ -624,7 +658,7 @@ final class HermesSessionViewModel {
         guard gen == sessionGeneration else { return }
         speechAuthorized = speechOK
         if !speechOK {
-            show(HermesSpeechError.notAuthorized.localizedDescription)
+            startError(HermesSpeechError.notAuthorized.localizedDescription)
         }
 
         audioManager.onRawBuffer = { [weak self] buffer in
@@ -667,8 +701,8 @@ final class HermesSessionViewModel {
                 if connectionState == .disconnected { audioManager.stopCapture() }
                 return
             }
-            if micSource == .glasses && !bluetoothActive { show(notice: Self.glassesMicFallbackNotice) }
-            if micSource == .headset && !bluetoothActive { show(notice: Self.headsetMicFallbackNotice) }
+            if micSource == .glasses && !bluetoothActive { startNotice(Self.glassesMicFallbackNotice) }
+            if micSource == .headset && !bluetoothActive { startNotice(Self.headsetMicFallbackNotice) }
             if micSource == .glassesSpeech {
                 // The glasses transcribe; the recognizer stays stopped.
                 // Start the recognizer once, below, on any failure.
@@ -686,7 +720,7 @@ final class HermesSessionViewModel {
             }
         } catch {
             guard gen == sessionGeneration else { return }
-            show("Audio setup failed: \(error.localizedDescription)")
+            startError("Audio setup failed: \(error.localizedDescription)")
             endSession()
             startFailedGeneration = sessionGeneration
             return
@@ -925,7 +959,8 @@ final class HermesSessionViewModel {
     /// Back from the background in phone mode: the iPhone camera stream
     /// stopped while the app was hidden, so start it again.
     func resumePhoneVisionIfNeeded() async {
-        guard phoneModeActive, !phoneCameraManager.isStreaming else { return }
+        // A showcase session never opens a camera, so it never resumes one.
+        guard sessionUsesVision, phoneModeActive, !phoneCameraManager.isStreaming else { return }
         await startPhoneVision()
     }
 

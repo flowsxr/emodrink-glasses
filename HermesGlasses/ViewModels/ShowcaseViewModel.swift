@@ -169,9 +169,11 @@ final class ShowcaseViewModel {
         stopLiveDrinkMode()
 
         // Language is resolved once per session: a running session in the
-        // other language is restarted (Ruling T8).
+        // other language is restarted (Ruling T8). So is live drink mode's
+        // session, which has a camera open: a run never uses one.
         EmoDrinkLanguage.setSetting(lang == .ja ? .ja : .en)
-        if hermesVM.connectionState != .disconnected, hermesVM.activeLanguage != lang {
+        if hermesVM.connectionState != .disconnected,
+           hermesVM.activeLanguage != lang || hermesVM.sessionUsesVision {
             hermesVM.endSession()
             for _ in 0..<50 where hermesVM.connectionState != .disconnected {
                 try? await Task.sleep(nanoseconds: 100_000_000)
@@ -190,11 +192,21 @@ final class ShowcaseViewModel {
             _ = await hermesVM.setMicSource(glassesSpeech ? .glassesSpeech : .phone, announceFallback: false)
         }
         guard gen == startGeneration else { return }
-        if hermesVM.connectionState == .disconnected { await hermesVM.startSession() }
+        // Voice and lens only: no camera, so no camera prompt mid-run, and
+        // start-up problems become Taka's run notice instead of an alert.
+        var issues: [String] = []
+        if hermesVM.connectionState == .disconnected {
+            await hermesVM.startSessionWithoutVision { issues.append($0) }
+        }
         guard gen == startGeneration else { return }
+        hermesVM.logVisionDiagnostics("showcase start")
         // No session (no key, audio failure): the run still plays on the
         // lens and the phone mirror, but nobody is listening.
-        if hermesVM.connectionState == .disconnected { runNotice = strings.noVoiceSession }
+        if hermesVM.connectionState == .disconnected {
+            runNotice = ([strings.noVoiceSession] + issues).joined(separator: " ")
+        } else if !issues.isEmpty {
+            runNotice = issues.joined(separator: " ")
+        }
 
         let run: ShowcaseRun
         do {

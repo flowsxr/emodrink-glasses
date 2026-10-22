@@ -81,6 +81,8 @@ struct ContentView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showSettings = true } label: { Image(systemName: "gearshape") }
                         .accessibilityLabel("Settings")
+                        // Settings can end or reconfigure the session a run is using.
+                        .disabled(showcaseVM.running)
                 }
             }
             .navigationDestination(for: ShowcaseRoute.self) { route in

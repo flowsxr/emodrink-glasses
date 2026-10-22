@@ -77,7 +77,9 @@ extension HermesSessionViewModel {
     /// recorded the reason in `glassesConnectIssue` when the SDK gave one)
     /// if the glasses can't be reached. The display is attached later, by
     /// the display manager, through the same GlassesLink.
-    func connectGlassesSession() async -> Bool {
+    /// `checkCamera: false` (the showcase) opens the session for the lens
+    /// only and skips the camera permission check.
+    func connectGlassesSession(checkCamera: Bool = true) async -> Bool {
         // A firmware update blocks everything, so stop here.
         if glassesLink.needsFirmwareUpdate {
             glassesConnectIssue = firmwareUpdateIssue
@@ -100,7 +102,7 @@ extension HermesSessionViewModel {
         }
 
         // Surface camera permission state early (non-interactive)
-        Task { await ensureCameraPermission(interactive: false) }
+        if checkCamera { Task { await ensureCameraPermission(interactive: false) } }
         return true
     }
 

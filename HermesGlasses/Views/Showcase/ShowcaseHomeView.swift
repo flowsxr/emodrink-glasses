@@ -29,14 +29,21 @@ struct ShowcaseHomeView: View {
     @State private var showProfile = false
 
     var body: some View {
-        HermesScrollPage {
-            ShowcaseMirror(content: hermesVM.lensContent, stepLabel: stepLabel, live: vm.running)
-                .padding(.horizontal, 16)
+        // Start / Reset is pinned at the bottom; the mirror takes at most
+        // 42% of the height left, so mirror, settings and Start share one
+        // screen.
+        GeometryReader { geo in
+            HermesScrollPage {
+                ShowcaseMirror(content: hermesVM.lensContent, stepLabel: stepLabel, live: vm.running)
+                    .frame(width: min(geo.size.width - 32, geo.size.height * 0.42))
+                    .frame(maxWidth: .infinity)
 
-            setupSection
-            startSection
-            moreSection
+                setupSection
+                moreSection
+            }
         }
+        .background(HermesTheme.groupedCanvas.ignoresSafeArea())
+        .safeAreaInset(edge: .bottom, spacing: 0) { startBar }
         .navigationTitle("Showcase")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(HermesTheme.groupedCanvas, for: .navigationBar)
@@ -67,14 +74,7 @@ struct ShowcaseHomeView: View {
             machineRow
             HermesDivider()
             Button { showProfile = true } label: {
-                HermesRow(title: "Guest", icon: "person", subtitle: vm.profile.detail) {
-                    Text(vm.profile.title)
-                        .font(.system(size: 17))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .layoutPriority(1)
-                }
+                HermesRow(vm.profile.title, icon: "person", subtitle: "Guest · \(vm.profile.detail)")
             }
             .buttonStyle(.plain)
             HermesDivider()
@@ -142,8 +142,15 @@ struct ShowcaseHomeView: View {
 
     // MARK: Start
 
-    private var startSection: some View {
-        VStack(spacing: 12) {
+    /// Pinned under the scroll: the notices, then Start or Reset.
+    private var startBar: some View {
+        VStack(spacing: 8) {
+            if let reason = vm.startBlockedReason, !vm.running {
+                HermesNotice(text: reason, systemImage: "exclamationmark.circle")
+            }
+            if let notice = vm.runNotice {
+                HermesNotice(text: notice, systemImage: "info.circle")
+            }
             Group {
                 if vm.running {
                     HermesPrimaryButton(title: "Reset for the next guest", systemImage: "arrow.counterclockwise") {
@@ -157,13 +164,11 @@ struct ShowcaseHomeView: View {
                 }
             }
             .padding(.horizontal, 16)
-            if let reason = vm.startBlockedReason, !vm.running {
-                HermesNotice(text: reason, systemImage: "exclamationmark.circle")
-            }
-            if let notice = vm.runNotice {
-                HermesNotice(text: notice, systemImage: "info.circle")
-            }
         }
+        .padding(.top, 10)
+        .padding(.bottom, 6)
+        .background(HermesTheme.groupedCanvas.opacity(0.96).ignoresSafeArea(edges: .bottom))
+        .overlay(alignment: .top) { HermesDivider() }
     }
 
     // MARK: More
@@ -185,6 +190,7 @@ struct ShowcaseHomeView: View {
                 HermesRow("Settings", icon: "gearshape")
             }
             .buttonStyle(.plain)
+            .disabled(vm.running)
         }
     }
 }
@@ -211,7 +217,7 @@ private struct ShowcaseStartButton: View {
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .frame(height: 58)
+            .frame(height: 54)
             .background(enabled || preparing ? HermesTheme.accent : Color.secondary.opacity(0.4),
                         in: Capsule())
             .opacity(preparing ? 0.75 : 1)
@@ -223,33 +229,57 @@ private struct ShowcaseStartButton: View {
 
 // MARK: - Mirror
 
-/// What the lens shows right now, square and full width, on the dark
-/// stage, with the run's step underneath.
+/// What the lens shows right now, square, with the run's step on it. A
+/// showcase card or clip fills the square edge to edge, exactly as the
+/// 600 x 600 lens draws it; anything else (live drink mode's HUD) shows
+/// in the simulated lens, and a blank lens is a quiet dark card.
 struct ShowcaseMirror: View {
     let content: LensContent
     let stepLabel: String
     let live: Bool
 
     var body: some View {
-        VStack(spacing: 10) {
-            SimulatedLensView(content: content)
-                .padding(.horizontal, 14)
-                .padding(.top, 24)
-                .padding(.bottom, 14)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .aspectRatio(1, contentMode: .fit)
-                .background(HermesTheme.lensStage,
-                            in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .environment(\.colorScheme, .dark)
-
-            HStack(spacing: 8) {
-                HermesStatusPill(text: stepLabel, dot: live ? HermesTheme.online : nil, tinted: live)
-                Spacer(minLength: 0)
-                Text("Mirror of the lens")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
+        ZStack {
+            HermesTheme.lensChrome
+            switch content {
+            case .showcase(let image, let clip):
+                ShowcaseLensMedia(image: image, clip: clip)
+            default:
+                if content.isBlank {
+                    VStack(spacing: 8) {
+                        Image(systemName: "eyeglasses")
+                            .font(.system(size: 30, weight: .light))
+                        Text("The lens is idle")
+                            .font(.system(size: 15, weight: .semibold))
+                    }
+                    .foregroundStyle(HermesTheme.cream.opacity(0.45))
+                } else {
+                    SimulatedLensView(content: content, compact: true)
+                        .padding(14)
+                }
             }
-            .padding(.horizontal, 4)
         }
+        .aspectRatio(1, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(alignment: .topLeading) {
+            stepPill.padding(10)
+        }
+        .environment(\.colorScheme, .dark)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Mirror of the lens")
+    }
+
+    private var stepPill: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(live ? HermesTheme.online : HermesTheme.cream.opacity(0.4))
+                .frame(width: 7, height: 7)
+            Text(stepLabel)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(HermesTheme.cream)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(HermesTheme.lensChrome.opacity(0.75), in: Capsule())
     }
 }

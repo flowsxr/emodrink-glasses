@@ -119,21 +119,10 @@ struct SimulatedLensView: View {
 
     /// The showcase card or clip, square and fitted on black, as on the lens.
     private func showcaseMedia(image: UIImage?, clip: URL?) -> some View {
-        ZStack {
-            Color.black
-            if let clip {
-                ShowcaseClipPlayer(url: clip)
-            } else if let image {
-                Image(uiImage: image)
-                    .resizable()
-                    .interpolation(.high)
-                    .scaledToFit()
-            }
-        }
-        .aspectRatio(1, contentMode: .fit)
-        .frame(maxWidth: compact ? 220 : .infinity)
-        .frame(maxWidth: .infinity)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        ShowcaseLensMedia(image: image, clip: clip)
+            .frame(maxWidth: compact ? 220 : .infinity)
+            .frame(maxWidth: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     /// Mirrors a button the wearer sees on the real lens.
@@ -147,6 +136,28 @@ struct SimulatedLensView: View {
             .padding(.horizontal, 9)
             .padding(.vertical, 4)
             .background(HermesTheme.accent, in: Capsule())
+    }
+}
+
+/// A showcase card or clip as the 600 x 600 lens draws it: square, fitted
+/// on black. Shared by the simulated lens and the showcase home's mirror.
+struct ShowcaseLensMedia: View {
+    let image: UIImage?
+    let clip: URL?
+
+    var body: some View {
+        ZStack {
+            Color.black
+            if let clip {
+                ShowcaseClipPlayer(url: clip)
+            } else if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+            }
+        }
+        .aspectRatio(1, contentMode: .fit)
     }
 }
 
