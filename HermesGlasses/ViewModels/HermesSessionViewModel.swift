@@ -85,6 +85,10 @@ final class HermesSessionViewModel {
     /// here first; true = it was a reply (why / something else / thanks) and
     /// nothing reaches the brain. False = a question for the drink persona.
     @ObservationIgnored var emoDrinkClaimer: (@MainActor (String) -> Bool)?
+    /// While a showcase run is active it claims EVERY finalized utterance
+    /// (consulted before `emoDrinkClaimer`), so the assistant's reply card
+    /// never replaces the deck. Also keeps listening partials off the lens.
+    @ObservationIgnored var showcaseClaimer: (@MainActor (String) -> Bool)?
     /// "what should I drink" / "start drink mode" / "stop drink mode".
     @ObservationIgnored var onEmoDrinkIntent: (@MainActor (HermesIntent) -> Void)?
     /// The session is being torn down; drink mode must stop its stream.
@@ -94,6 +98,13 @@ final class HermesSessionViewModel {
     /// Queued cues (`speakCue(_:queued: true)`) waiting for the current one
     /// to finish; drained one at a time by `speechSynthesizer.onFinished`.
     @ObservationIgnored private var cueQueue: [String] = []
+    /// `speakCueAndWait`'s caller, resumed when its line ends, on
+    /// `stopSpeaking()`, on cancellation or after a length-based cap.
+    @ObservationIgnored private var speechWaiter: CheckedContinuation<Void, Never>?
+    @ObservationIgnored private var speechWaiterToken = 0
+    /// Finishes to ignore before the waiter's own: replacing an on-device
+    /// line fires one onFinished for the cancelled line.
+    @ObservationIgnored private var speechWaiterSkips = 0
 
     /// Glasses camera permission (granted in the Meta AI app); nil = unknown.
     /// GlassesLink holds it, so the basics screen and Settings agree.
@@ -601,6 +612,7 @@ final class HermesSessionViewModel {
         speechSynthesizer.onFinished = { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self else { return }
+                self.speechLineFinished()
                 // A queued cue speaks next with the recognizer still
                 // suspended: state stays .speaking, no grace gap in between.
                 if case .speaking = self.connectionState, !self.cueQueue.isEmpty {
@@ -625,7 +637,8 @@ final class HermesSessionViewModel {
                 // are hearing Hermes's own voice
                 guard !self.isEchoOfResponse(text) else { return }
                 self.liveTranscript = text
-                self.displayManager.showListening(partial: text)
+                // A showcase run owns the lens: no listening screen over the deck.
+                if self.showcaseClaimer == nil { self.displayManager.showListening(partial: text) }
                 if text.split(separator: " ").count >= 2 {
                     self.interruptSpeech()
                 }
@@ -635,7 +648,8 @@ final class HermesSessionViewModel {
                 // let it overwrite the Thinking screen on the lens
                 switch self.connectionState {
                 case .listening, .recording:
-                    self.displayManager.showListening(partial: text)
+                    // A showcase run owns the lens: no listening screen over the deck.
+                    if self.showcaseClaimer == nil { self.displayManager.showListening(partial: text) }
                 default:
                     break
                 }
@@ -686,6 +700,17 @@ final class HermesSessionViewModel {
     func submitQuery(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+
+        // A showcase run claims every utterance: the deck follows the
+        // conversation through its own one-shot AI calls.
+        if let claim = showcaseClaimer, claim(trimmed) {
+            liveTranscript = ""
+            lastTranscript = trimmed
+            completeTestOutcome(.failure(TestFailure(
+                "The showcase claimed this utterance - reset the showcase before running this test."
+            )))
+            return
+        }
 
         // While a drink is on the lens its replies (why, a choice, thanks)
         // are claimed first and never reach the assistant.
@@ -1032,6 +1057,88 @@ final class HermesSessionViewModel {
         speakCue(text)
     }
 
+    /// A spoken line the caller waits on (the showcase runner): returns
+    /// when the line has been spoken, on `stopSpeaking()`, when the calling
+    /// task is cancelled, or after a cap well past the line's length. A
+    /// line already playing is replaced. Mid-answer (processing) the line
+    /// is skipped, as `speakCue` does. Other callers' cueQueue is untouched.
+    func speakCueAndWait(_ text: String) async {
+        releaseSpeechWaiter()
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !Task.isCancelled else { return }
+        switch connectionState {
+        case .listening:
+            connectionState = .speaking
+            speechRecognizer.isSuspended = true
+        case .speaking, .disconnected:
+            break
+        default:
+            return
+        }
+        speechWaiterSkips = speechSynthesizer.isSpeakingOnDevice ? 1 : 0
+        speechSynthesizer.speak(trimmed)
+        speechWaiterToken += 1
+        let token = speechWaiterToken
+        let cap = Self.speechWaitCapNanos(for: trimmed)
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                speechWaiter = continuation
+                Task { @MainActor [weak self] in
+                    try? await Task.sleep(nanoseconds: cap)
+                    guard let self, self.speechWaiterToken == token else { return }
+                    self.releaseSpeechWaiter()
+                }
+            }
+        } onCancel: {
+            Task { @MainActor [weak self] in
+                guard let self, self.speechWaiterToken == token else { return }
+                self.releaseSpeechWaiter()
+            }
+        }
+    }
+
+    /// Stops whatever is speaking (a reply, a cue, queued cues, a waited
+    /// line); onFinished returns the voice loop to listening.
+    func stopSpeaking() {
+        cueQueue.removeAll()
+        releaseSpeechWaiter()
+        if speechSynthesizer.isSpeaking { speechSynthesizer.stop() }
+    }
+
+    /// The cloud fetch (up to 10 s) plus a slow reading of the line.
+    private static func speechWaitCapNanos(for text: String) -> UInt64 {
+        UInt64(min(45, 12 + Double(text.count) * 0.15) * 1_000_000_000)
+    }
+
+    private func speechLineFinished() {
+        guard speechWaiter != nil else { return }
+        if speechWaiterSkips > 0 {
+            speechWaiterSkips -= 1
+            return
+        }
+        releaseSpeechWaiter()
+    }
+
+    private func releaseSpeechWaiter() {
+        speechWaiterToken += 1
+        speechWaiterSkips = 0
+        let waiter = speechWaiter
+        speechWaiter = nil
+        waiter?.resume()
+    }
+
+    // MARK: Showcase surface
+
+    func showShowcaseCard(_ image: UIImage, buttons: [ShowcaseButton], strings: ShowcaseStrings,
+                          onTap: @escaping (ShowcaseButton) -> Void) {
+        displayManager.showShowcaseCard(image, buttons: buttons, strings: strings, onTap: onTap)
+    }
+
+    @discardableResult
+    func playShowcaseClip(_ fileURL: URL) async -> Bool {
+        await displayManager.playShowcaseClip(fileURL)
+    }
+
     // MARK: EmoDrink surface
 
     func setPersonaOverride(_ prompt: String?) {
@@ -1061,6 +1168,7 @@ final class HermesSessionViewModel {
         onEmoDrinkSessionEnding = nil
         emoEnding?()
         cueQueue.removeAll()
+        releaseSpeechWaiter()
         speechSynthesizer.stop()
         speechRecognizer.stop()
         displayManager.deactivate()

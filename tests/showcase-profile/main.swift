@@ -100,5 +100,12 @@ let assumedSnap = GuestProfile.preset(.assumed).snapshot(date: d)
 expect(ShowcaseStrings(language: .en).reasons(for: assumedSnap).count == 2, "assumed preset yields 2 reasons (en)")
 expect(ShowcaseStrings(language: .ja).reasons(for: assumedSnap).count == 2, "assumed preset yields 2 reasons (ja)")
 
+// GuestProfile round-trips through JSON (the showcase_profile default).
+for p in [GuestProfile.preset(.stressed),
+          .answers(GuestAnswers(sleep: .poor, busyDay: true, exercised: false, hadCoffee: true))] {
+    let data = try! JSONEncoder().encode(p)
+    expect((try? JSONDecoder().decode(GuestProfile.self, from: data)) == p, "profile Codable round trip \(p)")
+}
+
 print(failures == 0 ? "ALL PASS" : "\(failures) FAILED")
 exit(failures == 0 ? 0 : 1)

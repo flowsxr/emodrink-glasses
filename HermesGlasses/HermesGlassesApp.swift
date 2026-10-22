@@ -27,6 +27,8 @@ struct HermesGlassesApp: App {
     @State private var wearablesViewModel: WearablesViewModel
     @State private var hermesSessionViewModel: HermesSessionViewModel
     @State private var emoDrinkViewModel: EmoDrinkViewModel
+    /// The showcase autopilot (Taka's Start). Task 11 puts it on screen.
+    @State private var showcaseViewModel: ShowcaseViewModel
     @State private var permissions = PermissionsCoordinator()
 
     /// First launch runs the three-step wizard (glasses → permissions →
@@ -75,7 +77,15 @@ struct HermesGlassesApp: App {
         )
         let session = HermesSessionViewModel(wearables: wearables, glassesLink: link)
         self._hermesSessionViewModel = State(wrappedValue: session)
-        self._emoDrinkViewModel = State(wrappedValue: EmoDrinkViewModel(hermesVM: session))
+        let emoDrink = EmoDrinkViewModel(hermesVM: session)
+        self._emoDrinkViewModel = State(wrappedValue: emoDrink)
+        let showcaseDirectory = (FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory).appendingPathComponent("showcase", isDirectory: true)
+        self._showcaseViewModel = State(wrappedValue: ShowcaseViewModel(
+            hermesVM: session,
+            catalog: DrinkCatalog.bundled(),
+            store: MachineStore(directory: showcaseDirectory),
+            stopLiveDrinkMode: { [weak emoDrink] in emoDrink?.stopDrinkMode() }))
     }
 
     var body: some Scene {

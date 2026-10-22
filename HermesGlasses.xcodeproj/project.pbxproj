@@ -56,6 +56,8 @@
 		AAAA00000000000000000E01 /* EmoDrink/PhysiologySnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E02 /* EmoDrink/PhysiologySnapshot.swift */; };
 		AAAA00000000000000000F23 /* DrinkNameMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F24 /* DrinkNameMatcher.swift */; };
 		AAAA00000000000000000F70 /* ShowcasePersona.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F71 /* ShowcasePersona.swift */; };
+		AAAA00000000000000000F72 /* ShowcaseClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F73 /* ShowcaseClock.swift */; };
+		AAAA00000000000000000F74 /* ShowcaseRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F75 /* ShowcaseRunner.swift */; };
 		AAAA00000000000000000F21 /* VendingMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F22 /* VendingMachine.swift */; };
 		AAAA00000000000000000F33 /* ShowcaseStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F34 /* ShowcaseStrings.swift */; };
 		AAAA00000000000000000F37 /* ShowcaseDirector.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F38 /* ShowcaseDirector.swift */; };
@@ -81,6 +83,7 @@
 		AAAA00000000000000000E22 /* Intents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E23 /* Intents.swift */; };
 		AAAA00000000000000000E20 /* FrameTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E21 /* FrameTools.swift */; };
 		AAAA00000000000000000E15 /* EmoDrinkViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E16 /* EmoDrinkViewModel.swift */; };
+		AAAA00000000000000000F76 /* ShowcaseViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F77 /* ShowcaseViewModel.swift */; };
 		AAAA00000000000000000E2A /* SessionTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E2B /* SessionTypes.swift */; };
 		AAAA00000000000000000E2E /* HermesSessionViewModel+Developer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E2F /* HermesSessionViewModel+Developer.swift */; };
 		AAAA00000000000000000E2C /* HermesSessionViewModel+Glasses.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E2D /* HermesSessionViewModel+Glasses.swift */; };
@@ -147,6 +150,8 @@
 		AAAA00000000000000000E02 /* EmoDrink/PhysiologySnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/PhysiologySnapshot.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F24 /* DrinkNameMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/DrinkNameMatcher.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F71 /* ShowcasePersona.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/ShowcasePersona.swift; sourceTree = "<group>"; };
+		AAAA00000000000000000F73 /* ShowcaseClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/ShowcaseClock.swift; sourceTree = "<group>"; };
+		AAAA00000000000000000F75 /* ShowcaseRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/ShowcaseRunner.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F22 /* VendingMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/VendingMachine.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F34 /* ShowcaseStrings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/ShowcaseStrings.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F38 /* ShowcaseDirector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/ShowcaseDirector.swift; sourceTree = "<group>"; };
@@ -172,6 +177,7 @@
 		AAAA00000000000000000E23 /* Intents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/Intents.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E21 /* FrameTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/FrameTools.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E16 /* EmoDrinkViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrinkViewModel.swift; sourceTree = "<group>"; };
+		AAAA00000000000000000F77 /* ShowcaseViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowcaseViewModel.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E2B /* SessionTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionTypes.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E2F /* HermesSessionViewModel+Developer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HermesSessionViewModel+Developer.swift"; sourceTree = "<group>"; };
 		AAAA00000000000000000E2D /* HermesSessionViewModel+Glasses.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HermesSessionViewModel+Glasses.swift"; sourceTree = "<group>"; };
@@ -251,6 +257,7 @@
 				AAAA00000000000000000E37 /* GlassesBasicsViewModel.swift */,
 				AAAA00000000000000000105 /* HermesSessionViewModel.swift */,
 				AAAA00000000000000000E16 /* EmoDrinkViewModel.swift */,
+				AAAA00000000000000000F77 /* ShowcaseViewModel.swift */,
 				AAAA00000000000000000E2B /* SessionTypes.swift */,
 				AAAA00000000000000000E2F /* HermesSessionViewModel+Developer.swift */,
 				AAAA00000000000000000E2D /* HermesSessionViewModel+Glasses.swift */,
@@ -288,6 +295,8 @@
 				AAAA00000000000000000E02 /* EmoDrink/PhysiologySnapshot.swift */,
 				AAAA00000000000000000F24 /* DrinkNameMatcher.swift */,
 				AAAA00000000000000000F71 /* ShowcasePersona.swift */,
+				AAAA00000000000000000F73 /* ShowcaseClock.swift */,
+				AAAA00000000000000000F75 /* ShowcaseRunner.swift */,
 				AAAA00000000000000000F22 /* VendingMachine.swift */,
 				AAAA00000000000000000F34 /* ShowcaseStrings.swift */,
 				AAAA00000000000000000F38 /* ShowcaseDirector.swift */,
@@ -434,6 +443,7 @@
 				AAAA00000000000000000821 /* LensContent.swift in Sources */,
 				AAAA00000000000000000841 /* ChoiceDetector.swift in Sources */,
 				AAAA00000000000000000E15 /* EmoDrinkViewModel.swift in Sources */,
+				AAAA00000000000000000F76 /* ShowcaseViewModel.swift in Sources */,
 				AAAA00000000000000000E2A /* SessionTypes.swift in Sources */,
 				AAAA00000000000000000E2E /* HermesSessionViewModel+Developer.swift in Sources */,
 				AAAA00000000000000000E2C /* HermesSessionViewModel+Glasses.swift in Sources */,
@@ -451,6 +461,8 @@
 				AAAA00000000000000000E01 /* EmoDrink/PhysiologySnapshot.swift in Sources */,
 				AAAA00000000000000000F23 /* DrinkNameMatcher.swift in Sources */,
 				AAAA00000000000000000F70 /* ShowcasePersona.swift in Sources */,
+				AAAA00000000000000000F72 /* ShowcaseClock.swift in Sources */,
+				AAAA00000000000000000F74 /* ShowcaseRunner.swift in Sources */,
 				AAAA00000000000000000F21 /* VendingMachine.swift in Sources */,
 				AAAA00000000000000000F33 /* ShowcaseStrings.swift in Sources */,
 				AAAA00000000000000000F37 /* ShowcaseDirector.swift in Sources */,

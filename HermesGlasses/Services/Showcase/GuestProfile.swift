@@ -11,22 +11,22 @@
 
 import Foundation
 
-enum GuestPreset: String, CaseIterable, Equatable {
+enum GuestPreset: String, CaseIterable, Codable, Equatable {
     case assumed, rested, shortSleep, stressed, postWorkout
 }
 
-enum SleepAnswer: Equatable {
+enum SleepAnswer: String, Codable, Equatable {
     case great, ok, poor
 }
 
-struct GuestAnswers: Equatable {
+struct GuestAnswers: Codable, Equatable {
     var sleep: SleepAnswer
     var busyDay: Bool
     var exercised: Bool
     var hadCoffee: Bool
 }
 
-enum GuestProfile: Equatable {
+enum GuestProfile: Codable, Equatable {
     case preset(GuestPreset)
     case answers(GuestAnswers)
 

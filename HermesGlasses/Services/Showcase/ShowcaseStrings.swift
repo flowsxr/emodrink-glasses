@@ -45,6 +45,15 @@ struct ShowcaseStrings {
         ja ? "少し考えますね。今はカードのおすすめをどうぞ。" : "Let me think about that. The card shows my pick for now."
     }
 
+    // MARK: Phone (why Start is blocked, clip preparation)
+
+    var catalogMissing: String { ja ? "ドリンクのカタログを読み込めません。" : "The drink catalogue could not be loaded." }
+    var machineEmpty: String {
+        ja ? "この自販機にはドリンクがありません。ドリンクを追加してください。" : "This machine has no drinks yet. Add some first."
+    }
+    var noMachine: String { ja ? "自販機を選んでください。" : "Pick a machine first." }
+    var preparing: String { ja ? "準備中…" : "Preparing…" }
+
     // MARK: Clip labels (morning and navigate)
 
     var sleepWord: String { ja ? "睡眠" : "sleep" }
@@ -76,6 +85,11 @@ struct ShowcaseStrings {
     var spokenScan: String { ja ? "この自販機のラインナップを見ていますね。" : "Looking at what this machine has." }
     func spokenReveal(drink: String, reason: String) -> String {
         ja ? "\(Self.spokenReasonJa(reason))、\(drink)はいかがでしょう。" : "\(reason), so how about \(drink)?"
+    }
+
+    /// The reveal for a card without reasons (a custom drink).
+    func spokenRevealPlain(drink: String) -> String {
+        ja ? "\(drink)はいかがでしょう。" : "How about \(drink)?"
     }
 
     /// Japanese label -> a phrase that joins with ので; unknown labels pass through.
@@ -152,6 +166,7 @@ struct ShowcaseStrings {
                    scanLine(count: 5), navigationLine(distance: "40メートル", name: "自販機"),
                    confirmLine, fallbackConversation,
                    spokenNavigate, spokenMorning, spokenScan, spokenReveal(drink: "ドリンク", reason: "睡眠不足"),
+                   spokenRevealPlain(drink: "ドリンク"), catalogMissing, machineEmpty, noMachine, preparing,
                    shortSleepLabel, hrvLowLabel, heartRateUpLabel, stressedLabel, wellRestedLabel, activeMorningLabel,
                    sleepWord, hrvLabel, restingHRLabel, hrvUnit, bpmUnit, distanceUnit, here,
                    sleepDuration(hours: 5.8), versusUsual(-12), versusUsual(3), versusUsual(0)]

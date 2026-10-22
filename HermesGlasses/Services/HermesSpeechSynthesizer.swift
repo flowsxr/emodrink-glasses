@@ -90,6 +90,8 @@ final class HermesSpeechSynthesizer: NSObject, @unchecked Sendable {
 
     /// Covers the on-device voice, the cloud player and an in-flight fetch.
     var isSpeaking: Bool { synthesizer.isSpeaking || fetchTask != nil || player != nil }
+    /// The on-device voice alone: replacing it fires one onFinished (didCancel).
+    var isSpeakingOnDevice: Bool { synthesizer.isSpeaking }
 
     func speak(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
