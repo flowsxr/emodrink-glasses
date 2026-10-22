@@ -134,7 +134,7 @@ struct MorningClipArt: View {
                 .foregroundStyle(Color.white)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
-                .minimumScaleFactor(0.8)
+                .minimumScaleFactor(0.8)  // 32 x 0.8 = 25.6 px
                 .shadow(color: Color.white.opacity(0.35), radius: 8)
                 .frame(width: 540, height: 100)
                 .opacity(summary)
@@ -164,7 +164,7 @@ struct MorningClipArt: View {
                     .font(.system(size: 26, weight: .medium))
                     .foregroundStyle(Color.white.opacity(0.7))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.92)
+                    .minimumScaleFactor(24.0 / 26)
                     .opacity(deltaAppear)
             }
         }
@@ -310,7 +310,7 @@ struct ScanClipArt: View {
                 .foregroundStyle(Color.white)
                 .shadow(color: Color.white.opacity(0.4), radius: 8)
                 .lineLimit(2)
-                .minimumScaleFactor(0.86)
+                .minimumScaleFactor(24.0 / 28)
                 .frame(width: 254, height: 80, alignment: .bottomLeading)
                 .opacity(found)
                 .offset(y: (1 - found) * 12)
@@ -446,7 +446,7 @@ struct NavigateClipArt: View {
                 .font(.system(size: 32, weight: .semibold))
                 .foregroundStyle(Color.white.opacity(0.85))
                 .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .minimumScaleFactor(24.0 / 32)
                 .frame(width: 520)
                 .opacity(enter)
                 .position(x: 300, y: 492 - 70 * here)
@@ -566,7 +566,8 @@ private struct SplitFigure: View {
             }
         }
         .lineLimit(1)
-        .minimumScaleFactor(0.7)
+        // The units are the smallest text: never below 24 px.
+        .minimumScaleFactor(24 / unitSize)
     }
 
     static func runs(_ text: String) -> [(text: String, digits: Bool)] {

@@ -77,8 +77,20 @@ final class HermesDisplayManager {
     /// GlassesLink's display state at the last change, to spot `.started`.
     private var lastLinkState: DisplayState?
 
-    /// Newest view waiting for the send pipeline (see `send`).
-    private var queuedView: FlexBox?
+    /// One item for the serialized send pipeline: a view, or a showcase
+    /// clip whose caller awaits the result.
+    private enum QueuedSend {
+        case view(FlexBox)
+        case video(uri: String, completion: CheckedContinuation<Bool, Never>)
+    }
+
+    /// Newest item waiting for the send pipeline (see `enqueue`).
+    private var queued: QueuedSend?
+    /// A showcase clip went out and nothing has replaced it yet: the next
+    /// view stops the video first.
+    private var clipOnLens = false
+    /// The last showcase card, redrawn when the display re-attaches.
+    private var lastShowcaseCard: (image: UIImage, buttons: [ShowcaseButton], strings: ShowcaseStrings)?
     private var sendTask: Task<Void, Never>?
     private var dwellTask: Task<Void, Never>?
     private var throttle = DisplaySendThrottle()
@@ -125,13 +137,22 @@ final class HermesDisplayManager {
     func deactivate() {
         cancelDwell()
         stopClipServer()
-        queuedView = nil
+        clipGeneration += 1
+        dropQueued()
         lastReplyText = ""
         let wasActive = isActive
         isActive = false
         status = .off
         if wasActive, link.isDisplayReady {
-            Task { [link] in await link.clear() }
+            // After any send in flight, so the clear cannot land under it.
+            let inFlight = sendTask
+            let stopClip = clipOnLens
+            clipOnLens = false
+            Task { [link] in
+                await inFlight?.value
+                if stopClip { await link.stopVideo() }
+                await link.clear()
+            }
         }
     }
 
@@ -173,7 +194,16 @@ final class HermesDisplayManager {
     /// A card sent while the display was off was dropped: draw the current
     /// one now, unless a view is already on its way (it waited for this).
     private func redrawAfterAttach() {
-        guard sendTask == nil, queuedView == nil, !suppressAttachRedraw else { return }
+        guard sendTask == nil, queued == nil, !suppressAttachRedraw else { return }
+        // A showcase card is redrawn here; a clip is not replayed (the
+        // runner moves on by its own clock).
+        if case .showcase(let image?, nil) = content, let card = lastShowcaseCard, card.image === image {
+            send(ShowcaseLens.card(card.image, buttons: card.buttons, strings: card.strings,
+                                   onTap: { [weak self] button in
+                                       Task { @MainActor in self?.onShowcaseTap?(button) }
+                                   }))
+            return
+        }
         _ = attachRedraw?()
     }
 
@@ -283,6 +313,7 @@ final class HermesDisplayManager {
         cancelDwell()
         lastReplyText = ""
         onShowcaseTap = onTap
+        lastShowcaseCard = (image, buttons, strings)
         send(ShowcaseLens.card(image, buttons: buttons, strings: strings, onTap: { [weak self] button in
             Task { @MainActor in self?.onShowcaseTap?(button) }
         }))
@@ -303,11 +334,6 @@ final class HermesDisplayManager {
         let generation = clipGeneration
         guard isActive else { return false }
 
-        // A card already on its way lands first, so it cannot cover the clip.
-        queuedView = nil
-        await sendTask?.value
-        guard generation == clipGeneration, isActive else { return false }
-
         var uri = fileURL.absoluteString
         if UserDefaults.standard.string(forKey: Self.clipTransportKey) == "http" {
             let server = LocalClipServer(fileURL: fileURL)
@@ -323,12 +349,17 @@ final class HermesDisplayManager {
                 debug("Clip server failed (\(error)); sending the file URI")
             }
         }
-        let sent = await link.sendVideo(uri: uri, label: "showcase clip")
-        if !sent { debug("Clip send failed (display \(link.displayStateText))") }
+        guard generation == clipGeneration, isActive else { return false }
+        // Through the same serialized pipeline as the cards: one send in
+        // flight, newest wins (a superseded clip returns false).
+        let sent = await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+            enqueue(.video(uri: uri, completion: continuation))
+        }
+        if !sent { debug("Clip send failed or superseded (display \(link.displayStateText))") }
         if clipServer != nil, generation == clipGeneration {
             scheduleClipServerStop(for: fileURL, generation: generation)
         }
-        return sent
+        return sent && generation == clipGeneration
     }
 
     /// The clip has ended a little after its own length: stop serving it.
@@ -403,18 +434,43 @@ final class HermesDisplayManager {
         clipGeneration += 1
         stopClipServer()
         guard isActive else { return }
-        queuedView = view
+        enqueue(.view(view))
+    }
+
+    /// Serialized send pipeline through GlassesLink, shared by views and
+    /// showcase clips: newest queued item wins, one send in flight. A view
+    /// replacing a clip stops the video first, inside the same loop.
+    private func enqueue(_ item: QueuedSend) {
+        dropQueued()
+        queued = item
         guard sendTask == nil else { return }  // drain loop already running
         sendTask = Task { [weak self] in
-            while let self, self.isActive, let next = self.queuedView {
-                self.queuedView = nil
-                let sent = await self.link.send(next, label: "HUD")
-                if !sent {
-                    self.debug("Display send failed (display \(self.link.displayStateText))")
+            while let self, self.isActive, let next = self.queued {
+                self.queued = nil
+                switch next {
+                case .view(let view):
+                    if self.clipOnLens {
+                        self.clipOnLens = false
+                        await self.link.stopVideo()
+                    }
+                    let sent = await self.link.send(view, label: "HUD")
+                    if !sent {
+                        self.debug("Display send failed (display \(self.link.displayStateText))")
+                    }
+                case .video(let uri, let completion):
+                    let sent = await self.link.sendVideo(uri: uri, label: "showcase clip")
+                    self.clipOnLens = sent
+                    completion.resume(returning: sent)
                 }
             }
             self?.sendTask = nil
         }
+    }
+
+    /// Discards the waiting item; a waiting clip's caller hears false.
+    private func dropQueued() {
+        if case .video(_, let completion)? = queued { completion.resume(returning: false) }
+        queued = nil
     }
 
     private func scheduleDwell(seconds: Double) {

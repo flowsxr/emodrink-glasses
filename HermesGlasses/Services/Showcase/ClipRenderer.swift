@@ -67,9 +67,12 @@ enum ClipRenderer {
             for i in 0..<count {
                 try Task.checkCancellation()
                 let t = count > 1 ? Double(i) / Double(count - 1) : 1
-                guard let image = LensRenderer.cgImage(frame(t)) else { throw RenderError.frameFailed(i) }
                 guard let pool = adaptor.pixelBufferPool else { throw RenderError.noPixelBuffer }
-                let buffer = try pixelBuffer(from: image, pool: pool)
+                // Each frame's image and bitmap context are released before the next.
+                let buffer: CVPixelBuffer = try autoreleasepool {
+                    guard let image = LensRenderer.cgImage(frame(t)) else { throw RenderError.frameFailed(i) }
+                    return try pixelBuffer(from: image, pool: pool)
+                }
                 while !input.isReadyForMoreMediaData {
                     if w.status == .failed { break }
                     try await Task.sleep(nanoseconds: 5_000_000)
@@ -88,8 +91,11 @@ enum ClipRenderer {
             guard w.status == .completed else {
                 throw RenderError.writerFailed(w.error?.localizedDescription ?? "finishWriting ended \(w.status.rawValue)")
             }
-            if fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
-            try fm.moveItem(at: temp, to: url)
+            if fm.fileExists(atPath: url.path) {
+                _ = try fm.replaceItemAt(url, withItemAt: temp)
+            } else {
+                try fm.moveItem(at: temp, to: url)
+            }
         } catch {
             if let writer, writer.status == .writing { writer.cancelWriting() }
             try? fm.removeItem(at: temp)
