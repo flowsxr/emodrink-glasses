@@ -555,7 +555,9 @@ final class HermesSessionViewModel {
     /// The showcase's session: voice and the lens, never a camera. No
     /// iPhone capture session, no glasses camera check, no "using this
     /// iPhone as the eye" notice, and the phone stream is not resumed in
-    /// front (`resumePhoneVisionIfNeeded`). The glasses DISPLAY still
+    /// front (`resumePhoneVisionIfNeeded`). No device context either: its
+    /// location request would put a prompt over the run, and the
+    /// showcase's AI calls never read it. The glasses DISPLAY still
     /// attaches when glasses are reachable; otherwise the run plays on the
     /// simulated lens. Problems that would raise the error or notice alert
     /// go to `reportIssue` instead (Taka's run notice).
@@ -639,8 +641,8 @@ final class HermesSessionViewModel {
         }
 
         // Personal context (time/location/motion/battery/weather) -
-        // requests location permission on first use
-        contextProvider.start()
+        // requests location permission on first use. Not for the showcase.
+        if vision { contextProvider.start() }
 
         // 2. Check the brain: the provider needs a key. A recording-only
         // session skips this: nothing it captures is ever sent anywhere.

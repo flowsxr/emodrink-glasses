@@ -229,7 +229,7 @@ private struct ShowcaseStartButton: View {
 
 // MARK: - Mirror
 
-/// What the lens shows right now, square, with the run's step on it. A
+/// What the lens shows right now, square, with the run's step under it. A
 /// showcase card or clip fills the square edge to edge, exactly as the
 /// 600 x 600 lens draws it; anything else (live drink mode's HUD) shows
 /// in the simulated lens, and a blank lens is a quiet dark card.
@@ -239,6 +239,13 @@ struct ShowcaseMirror: View {
     let live: Bool
 
     var body: some View {
+        VStack(spacing: 8) {
+            screen
+            stepPill
+        }
+    }
+
+    private var screen: some View {
         ZStack {
             HermesTheme.lensChrome
             switch content {
@@ -261,25 +268,13 @@ struct ShowcaseMirror: View {
         }
         .aspectRatio(1, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(alignment: .topLeading) {
-            stepPill.padding(10)
-        }
         .environment(\.colorScheme, .dark)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Mirror of the lens")
     }
 
+    /// The run's step, under the mirror so it never covers the lens art.
     private var stepPill: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(live ? HermesTheme.online : HermesTheme.cream.opacity(0.4))
-                .frame(width: 7, height: 7)
-            Text(stepLabel)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(HermesTheme.cream)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(HermesTheme.lensChrome.opacity(0.75), in: Capsule())
+        HermesStatusPill(text: stepLabel, dot: live ? HermesTheme.online : nil, tinted: live)
     }
 }
