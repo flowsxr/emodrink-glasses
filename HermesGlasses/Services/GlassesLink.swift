@@ -1004,10 +1004,11 @@ final class GlassesLink {
     /// Mapping from the SDK's `InputEvent` (see `GlassesNav.from`):
     /// - `.nav` right or down -> `.forward`; left or up -> `.backward`
     ///   (swipe direction on the temple pad or Neural Band)
-    /// - `.select`, and the `.action` button -> `.select`
-    /// - `.back`, `.capture`, `.drag` and other buttons are ignored.
+    /// - `.select`, `.back`, `.capture`, `.drag` and every button are
+    ///   ignored: select already presses the focused native lens button,
+    ///   so mapping it too would act twice.
     enum GlassesNav: Equatable {
-        case forward, backward, select
+        case forward, backward
 
         static func from(_ event: InputEvent) -> GlassesNav? {
             switch event {
@@ -1017,9 +1018,7 @@ final class GlassesLink {
                 case .left, .up: return .backward
                 @unknown default: return nil
                 }
-            case .select: return .select
-            case .button(let type, _, _): return type == .action ? .select : nil
-            case .back, .capture, .drag: return nil
+            case .select, .button, .back, .capture, .drag: return nil
             @unknown default: return nil
             }
         }

@@ -73,8 +73,11 @@ Not yet done on a device; the build was written without glasses.
 - **Showcase spikes panel** (Settings › Glasses › Developer › Showcase
   spikes): video by file and by http, card latency, and glasses speech.
   Record which clip transport plays and set `showcase_clip_transport` to it.
-- **Swipe directions:** they are guessed from SDK names; flip them in
-  `GlassesNav.from` if reversed.
+- **Swipe:** `showcase_glasses_swipe` is off by default. Turn it on in the
+  spikes and check that a swipe turns the deck once and does NOT also move the
+  focus between the lens buttons; the directions are guessed from SDK names,
+  flip them in `GlassesNav.from` if reversed. Select is never mapped (the lens
+  buttons handle it).
 - **Glasses speech and the call screen:** confirm there is no call screen,
   finals arrive once per utterance, and note the locale the glasses report.
   Only then turn `showcase_glasses_speech` on (it is off by default).

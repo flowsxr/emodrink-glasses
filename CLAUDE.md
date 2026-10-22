@@ -217,8 +217,11 @@ or the iPhone camera in phone mode.
 - **`SpeechFinishGate` guards stale finishes** of the speech synthesizer, so a
   cancelled line's finish callback cannot advance the next step.
 - **Glasses input is two settings.** Swipe (`showcase_glasses_swipe`, default
-  ON, harmless if no events arrive) maps via `GlassesNav.from`; the directions
-  are guessed from SDK names, flip them there if reversed. Glasses speech
+  OFF until the owner's inputs spike shows a nav event does not also move the
+  lens buttons' focus) maps via `GlassesNav.from`; the directions are guessed
+  from SDK names, flip them there if reversed. Select and the action button
+  are NOT mapped: the native lens buttons already handle select, and mapping
+  it as well chose twice. Glasses speech
   (`MicSource.glassesSpeech`, `showcase_glasses_speech`, default OFF) stays
   off until proven on device: the glasses mic is HFP and the firmware may
   show the call screen over the lens.

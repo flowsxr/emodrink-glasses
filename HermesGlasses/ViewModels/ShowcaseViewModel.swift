@@ -25,8 +25,11 @@ final class ShowcaseViewModel {
     static let machineKey = "showcase_machine_id"
     static let languageKey = "showcase_language"
     static let profileKey = "showcase_profile"
-    /// Developer setting: swipes on the glasses or Neural Band drive the deck.
+    /// Developer setting: swipes on the glasses or Neural Band drive the
+    /// deck. Off by default until a device shows that a nav event does not
+    /// also move the lens buttons' focus (it would then act twice).
     static let glassesSwipeKey = "showcase_glasses_swipe"
+    static let glassesSwipeDefault = false
     private static let navKey = "showcase"
     static let askTimeout: TimeInterval = 6
     static let askMaxTokens = 200
@@ -163,7 +166,10 @@ final class ShowcaseViewModel {
         // Claimed from the first moment: the guest may talk while clips render.
         hermesVM.showcaseClaimer = { [weak self] text in self?.claim(text) ?? false }
 
-        hermesVM.glassesLink.observeNavigation(Self.navKey) { [weak self] nav in self?.navigated(nav) }
+        // Only with the swipe setting on: no inputs capability otherwise.
+        if defaults.object(forKey: Self.glassesSwipeKey) as? Bool ?? Self.glassesSwipeDefault {
+            hermesVM.glassesLink.observeNavigation(Self.navKey) { [weak self] nav in self?.navigated(nav) }
+        }
 
         // Two autopilots on one lens would fight (Ruling 3).
         stopLiveDrinkMode()
@@ -276,14 +282,14 @@ final class ShowcaseViewModel {
         return true
     }
 
-    /// Swipe forward/back rotate the deck, select picks; deck step only.
+    /// Swipe forward/back rotate the deck; deck step only. Select is left
+    /// to the native lens buttons, which already handle it.
     private func navigated(_ nav: GlassesLink.GlassesNav) {
         guard running, step == .deck,
-              defaults.object(forKey: Self.glassesSwipeKey) as? Bool ?? true else { return }
+              defaults.object(forKey: Self.glassesSwipeKey) as? Bool ?? Self.glassesSwipeDefault else { return }
         switch nav {
         case .forward: runner?.handle(.next)
         case .backward: runner?.handle(.previous)
-        case .select: runner?.handle(.choose)
         }
     }
 

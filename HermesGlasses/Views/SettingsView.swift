@@ -144,7 +144,7 @@ private struct GlassesPage: View {
     let basicsVM: GlassesBasicsViewModel
     @State private var showBasics = false
     @AppStorage(HermesDisplayManager.clipTransportKey) private var clipTransport = "file"
-    @AppStorage(ShowcaseViewModel.glassesSwipeKey) private var glassesSwipe = true
+    @AppStorage(ShowcaseViewModel.glassesSwipeKey) private var glassesSwipe = ShowcaseViewModel.glassesSwipeDefault
 
     var body: some View {
         HermesScrollPage {
@@ -152,7 +152,7 @@ private struct GlassesPage: View {
             cameraSection
             phoneModeSection
             HermesSection(header: "Developer",
-                          footer: "Glasses basics: the three on-device tests (lens card, camera feed, vending machine check) on the same glasses path EmoDrink uses. Local HTTP serves showcase clips from 127.0.0.1 instead of sending a file:// URI. Meta speech (untested on hardware) lets the glasses transcribe the guest instead of the iPhone mic, when their language matches the run's.") {
+                          footer: "Glasses basics: the three on-device tests (lens card, camera feed, vending machine check) on the same glasses path EmoDrink uses. Local HTTP serves showcase clips from 127.0.0.1 instead of sending a file:// URI. Showcase glasses swipe (off by default, untested on hardware) turns the deck on a swipe; leave it off if a swipe also moves the lens buttons. Meta speech (untested on hardware) lets the glasses transcribe the guest instead of the iPhone mic, when their language matches the run's.") {
                 Button {
                     showBasics = true
                 } label: {
