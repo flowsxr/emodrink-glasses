@@ -157,8 +157,11 @@ final class ShowcaseRunner {
                                       user: Self.revealUserText)
         guard alive(gen) else { return }
         if serial == inputSerial {
-            let spoken = reply.map { ShowcaseReply.parse($0, machineDrinkIDs: machineDrinkIDs).spoken } ?? ""
-            await sayDeckLine(spoken.isEmpty ? scriptedReveal(front) : spoken)
+            let spoken = reply.flatMap {
+                ShowcaseReply.speakable(ShowcaseReply.parse($0, machineDrinkIDs: machineDrinkIDs).spoken,
+                                        language: strings.language)
+            }
+            await sayDeckLine(spoken ?? scriptedReveal(front))
             guard alive(gen) else { return }
             if serial == inputSerial { present(.why) }
         }
@@ -227,9 +230,9 @@ final class ShowcaseRunner {
                 present(.why)
             }
         }
-        let spoken = parsed?.spoken ?? ""
+        let spoken = parsed.flatMap { ShowcaseReply.speakable($0.spoken, language: strings.language) }
         speechTask?.cancel()
-        await sayDeckLine(spoken.isEmpty ? ShowcaseReply.fallbackLine(strings: strings) : spoken)
+        await sayDeckLine(spoken ?? ShowcaseReply.fallbackLine(strings: strings))
         // The idle timers count from the end of the reply, not its start.
         if alive(gen), serial == inputSerial { restartIdle() }
         return true

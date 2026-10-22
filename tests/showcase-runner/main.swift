@@ -668,6 +668,37 @@ do {
     expect(r.fx.said.last == ja.fallbackConversation, "ja: Japanese fallback line")
     _ = await r.runner.handleUtterance("次へ")
     expect(r.runner.deck.cards[0].drinkID == r.run.deck.cards[1].drinkID, "ja: spoken 次へ moves the deck")
+    r.fx.replies = ["Try something light today."]
+    _ = await r.runner.handleUtterance("おすすめは？")
+    expect(r.fx.said.last == ja.fallbackConversation, "ja: an English AI reply is replaced by the scripted line")
+    r.fx.replies = ["今日は軽めがいいですね。"]
+    _ = await r.runner.handleUtterance("おすすめは？")
+    expect(r.fx.said.last == "今日は軽めがいいですね。", "ja: a Japanese AI reply is spoken")
+    r.runner.reset()
+}
+
+do {
+    let r = rig(navigation: false, language: .ja)
+    let ja = ShowcaseStrings(language: .ja)
+    r.fx.defaultReply = "A fresh start for your morning."
+    Task { await r.runner.start() }
+    await settle()
+    await r.clock.advance(by: 22)
+    await settle()
+    let front = r.run.deck.cards[0]
+    expect(r.fx.said.last == ja.spokenReveal(drink: front.name, reason: front.reasons.first?.label ?? ""),
+           "ja: an English reveal reply speaks the scripted reveal")
+    r.runner.reset()
+}
+
+do {
+    let r = rig(navigation: false, language: .en)
+    r.fx.defaultReply = "A fresh start."
+    Task { await r.runner.start() }
+    await settle()
+    await r.clock.advance(by: 22)
+    await settle()
+    expect(r.fx.said.last == "A fresh start.", "en: the AI reveal is spoken as before")
     r.runner.reset()
 }
 

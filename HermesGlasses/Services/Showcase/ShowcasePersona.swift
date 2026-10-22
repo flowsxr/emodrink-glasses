@@ -90,6 +90,31 @@ enum ShowcaseReply {
     }
 
     static func fallbackLine(strings: ShowcaseStrings) -> String { strings.fallbackConversation }
+
+    /// The parsed reply when it may be spoken in this run, else nil (speak
+    /// the scripted line instead). Empty is never spoken, and a Japanese
+    /// run speaks only a reply with some Japanese in it (hiragana, katakana
+    /// or kanji): a model that answered in English must not reach the voice.
+    static func speakable(_ spoken: String, language: Language) -> String? {
+        guard !spoken.isEmpty else { return nil }
+        guard language == .ja else { return spoken }
+        return spoken.unicodeScalars.contains(where: isJapanese) ? spoken : nil
+    }
+
+    private static func isJapanese(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.value {
+        case 0x3040...0x309F,  // hiragana
+             0x30A0...0x30FF,  // katakana
+             0x31F0...0x31FF,  // katakana phonetic extensions
+             0xFF66...0xFF9D,  // half-width katakana
+             0x3400...0x4DBF,  // CJK extension A
+             0x4E00...0x9FFF,  // CJK unified ideographs
+             0xF900...0xFAFF:  // CJK compatibility ideographs
+            return true
+        default:
+            return false
+        }
+    }
 }
 
 enum ShowcaseCommand: Equatable {

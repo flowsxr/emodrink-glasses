@@ -136,7 +136,7 @@ struct ShowcaseRun {
         if let function = drink.functions.first {
             tag = strings.tag(for: function)
             if drink.caffeineMg > 30 {
-                tag += language == .ja ? " · \(drink.caffeineMg)mg" : " · \(drink.caffeineMg) MG"
+                tag += " · " + strings.caffeineTag(mg: drink.caffeineMg)
             }
         }
         return ShowcaseCard(drinkID: drink.id,

@@ -120,7 +120,15 @@ var cof = sample; cof.drinkIDs = [coffee.id]
 let cofEN = makeRun(cof).deck.cards[0]
 expect(cofEN.tag == sr.tag(for: coffee.functions[0]) + " · \(coffee.caffeineMg) MG", "English tag with caffeine")
 let cofJA = makeRun(cof, assumed, .ja).deck.cards[0]
-expect(cofJA.tag == ShowcaseStrings(language: .ja).tag(for: coffee.functions[0]) + " · \(coffee.caffeineMg)mg", "Japanese tag with caffeine")
+expect(cofJA.tag == ShowcaseStrings(language: .ja).tag(for: coffee.functions[0]) + " · カフェイン入り", "Japanese tag says caffeine in Japanese")
+// No "mg" (or any ASCII letter) on a Japanese card's tag, for every drink in the catalogue.
+let jaTags = catalog.drinks.map { drink -> String in
+    var one = sample; one.drinkIDs = [drink.id]
+    return makeRun(one, assumed, .ja).deck.cards[0].tag
+}
+expect(!jaTags.isEmpty && jaTags.allSatisfy { !$0.unicodeScalars.contains { $0.isASCII && CharacterSet.letters.contains($0) } },
+       "Japanese tags have no ASCII letters")
+expect(jaTags.contains { $0.contains("カフェイン入り") }, "a strong Japanese drink carries カフェイン入り")
 let plain = catalog.drinks.first { $0.caffeineMg <= 30 && !$0.functions.isEmpty }!
 var pl = sample; pl.drinkIDs = [plain.id]
 expect(makeRun(pl).deck.cards[0].tag == sr.tag(for: plain.functions[0]), "no caffeine suffix at or under 30 mg")

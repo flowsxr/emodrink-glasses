@@ -137,6 +137,10 @@ struct ShowcaseStrings {
         }
     }
 
+    /// The caffeine note after the tag for a strong drink: the figure in
+    /// English, a Japanese phrase in a Japanese run (no "mg" on its lens).
+    func caffeineTag(mg: Int) -> String { ja ? "カフェイン入り" : "\(mg) MG" }
+
     // MARK: Reason labels
 
     var shortSleepLabel: String { ja ? "睡眠不足" : "Short sleep" }
@@ -178,6 +182,7 @@ struct ShowcaseStrings {
             out.append(summary(for: BodyState(recovery: l, arousal: a)))
         } }
         out += DrinkFunction.allCases.map(tag(for:))
+        out.append(caffeineTag(mg: 80))
         return out
     }
 }

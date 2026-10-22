@@ -117,5 +117,18 @@ for (_, s) in sets { for p in s { if !seen.insert(p).inserted { dup = true; prin
 expect(!dup, "no phrase in two sets")
 for (cmd, s) in sets { for p in s { expect(ShowcaseCommand.spoken(p, language: .en) == cmd, "phrase '\(p)' -> \(cmd)") } }
 
+// Spoken-reply language check (a Japanese run never speaks an English reply)
+expect(ShowcaseReply.speakable("", language: .en) == nil, "speakable: empty is never spoken (en)")
+expect(ShowcaseReply.speakable("", language: .ja) == nil, "speakable: empty is never spoken (ja)")
+expect(ShowcaseReply.speakable("Try the green tea.", language: .en) == "Try the green tea.", "speakable: English in an English run")
+expect(ShowcaseReply.speakable("Try the green tea.", language: .ja) == nil, "speakable: English in a Japanese run falls back")
+expect(ShowcaseReply.speakable("HRV 42, OK.", language: .ja) == nil, "speakable: digits and ASCII only fall back in ja")
+expect(ShowcaseReply.speakable("今日はこれ。", language: .ja) == "今日はこれ。", "speakable: hiragana and kanji")
+expect(ShowcaseReply.speakable("カルピス!", language: .ja) == "カルピス!", "speakable: katakana only")
+expect(ShowcaseReply.speakable("緑茶", language: .ja) == "緑茶", "speakable: kanji only")
+expect(ShowcaseReply.speakable("ｶﾙﾋﾟｽ", language: .ja) == "ｶﾙﾋﾟｽ", "speakable: half-width katakana")
+expect(ShowcaseReply.speakable("HRVが低めなので、お茶はいかが？", language: .ja) != nil, "speakable: mixed with HRV is Japanese")
+expect(ShowcaseReply.speakable("今日はこれ。", language: .en) == "今日はこれ。", "speakable: an English run does not filter")
+
 print(failures == 0 ? "ALL PASS" : "\(failures) FAILED")
 exit(failures == 0 ? 0 : 1)
