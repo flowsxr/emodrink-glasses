@@ -4,11 +4,20 @@
 // What is on the lens right now, as a value. The glasses render it through
 // the Meta SDK's view DSL (HermesDisplayScreens); phone mode renders the
 // SAME value in SwiftUI (SimulatedLensView). EmoDrink cases carry their
-// text already in the wearer's language (EmoDrinkStrings). Foundation only,
-// so the text derivation unit-tests standalone (tests/lens-content).
+// text already in the wearer's language (EmoDrinkStrings). Foundation plus
+// the platform image type (for the showcase's rendered cards), so the text
+// derivation unit-tests standalone on macOS (tests/lens-content).
 //
 
 import Foundation
+#if canImport(UIKit)
+import UIKit
+/// A rendered lens picture (the showcase's cards).
+typealias LensImage = UIImage
+#else
+import AppKit
+typealias LensImage = NSImage
+#endif
 
 /// One drink offered in the three-drink step.
 struct LensDrinkOption: Equatable {
@@ -33,6 +42,10 @@ enum LensContent: Equatable {
     case emoDrinkChoices(heading: String, options: [LensDrinkOption], source: String)
     /// EmoDrink drink mode, nothing in view yet.
     case emoDrinkWatching(heading: String, text: String, hint: String)
+    /// Showcase: a rendered 600 x 600 card (with native buttons on the
+    /// lens), or a rendered clip playing full screen. The picture carries
+    /// all the text, so the text fields below are empty.
+    case showcase(image: LensImage?, clip: URL?)
 
     /// Nothing to draw: the simulated lens shows its empty frame.
     var isBlank: Bool { self == .blank }
@@ -52,7 +65,7 @@ enum LensContent: Equatable {
     /// Small all-caps line above the body, or nil.
     var label: String? {
         switch self {
-        case .blank, .thinking, .reply, .emoDrink, .emoDrinkChoices: return nil
+        case .blank, .thinking, .reply, .emoDrink, .emoDrinkChoices, .showcase: return nil
         case .listening: return "LISTENING"
         case .photoCaptured: return "PHOTO"
         case .newConversation: return "NEW CHAT"
@@ -72,13 +85,14 @@ enum LensContent: Equatable {
         case .emoDrink(let title, _, _, _, _): return title
         case .emoDrinkChoices(let heading, _, _): return heading
         case .emoDrinkWatching(_, let text, _): return text
+        case .showcase: return ""
         }
     }
 
     /// Monospaced status line under the body, or nil.
     var statusLine: String? {
         switch self {
-        case .blank, .photoCaptured, .newConversation: return nil
+        case .blank, .photoCaptured, .newConversation, .showcase: return nil
         case .listening: return "listening"
         case .thinking: return "thinking…"
         case .reply(_, let speaking, let choices):
@@ -97,7 +111,7 @@ enum LensContent: Equatable {
     var isLive: Bool {
         switch self {
         case .blank, .photoCaptured, .newConversation: return false
-        case .listening, .thinking, .reply, .emoDrink, .emoDrinkChoices, .emoDrinkWatching: return true
+        case .listening, .thinking, .reply, .emoDrink, .emoDrinkChoices, .emoDrinkWatching, .showcase: return true
         }
     }
 }

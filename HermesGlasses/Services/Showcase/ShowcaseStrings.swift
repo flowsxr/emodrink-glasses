@@ -45,6 +45,30 @@ struct ShowcaseStrings {
         ja ? "少し考えますね。今はカードのおすすめをどうぞ。" : "Let me think about that. The card shows my pick for now."
     }
 
+    // MARK: Clip labels (morning and navigate)
+
+    var sleepWord: String { ja ? "睡眠" : "sleep" }
+    var hrvLabel: String { "HRV" }
+    var restingHRLabel: String { ja ? "安静時心拍" : "Resting HR" }
+    var hrvUnit: String { ja ? "ミリ秒" : "ms" }
+    var bpmUnit: String { ja ? "拍/分" : "bpm" }
+    var distanceUnit: String { ja ? "メートル" : "m" }
+    var here: String { ja ? "到着" : "Here" }
+
+    /// "5h48" / "5時間48分".
+    func sleepDuration(hours: Double) -> String {
+        let minutes = max(0, Int((hours * 60).rounded()))
+        let h = minutes / 60, m = minutes % 60
+        return ja ? "\(h)時間\(m)分" : "\(h)h" + String(format: "%02d", m)
+    }
+
+    /// A figure against the guest's usual: "↓12 vs your usual" / "いつもより↓12".
+    func versusUsual(_ delta: Int) -> String {
+        if delta == 0 { return ja ? "いつもどおり" : "Your usual" }
+        let arrow = delta < 0 ? "↓" : "↑"
+        return ja ? "いつもより\(arrow)\(abs(delta))" : "\(arrow)\(abs(delta)) vs your usual"
+    }
+
     // MARK: Spoken step lines
 
     var spokenNavigate: String { ja ? "自販機までご案内しますね。" : "Let me walk you to the machine." }
@@ -128,7 +152,9 @@ struct ShowcaseStrings {
                    scanLine(count: 5), navigationLine(distance: "40メートル", name: "自販機"),
                    confirmLine, fallbackConversation,
                    spokenNavigate, spokenMorning, spokenScan, spokenReveal(drink: "ドリンク", reason: "睡眠不足"),
-                   shortSleepLabel, hrvLowLabel, heartRateUpLabel, stressedLabel, wellRestedLabel, activeMorningLabel]
+                   shortSleepLabel, hrvLowLabel, heartRateUpLabel, stressedLabel, wellRestedLabel, activeMorningLabel,
+                   sleepWord, hrvLabel, restingHRLabel, hrvUnit, bpmUnit, distanceUnit, here,
+                   sleepDuration(hours: 5.8), versusUsual(-12), versusUsual(3), versusUsual(0)]
         for l in BodyLevel.allCasesForStrings { for a in BodyLevel.allCasesForStrings {
             out.append(summary(for: BodyState(recovery: l, arousal: a)))
         } }
@@ -139,4 +165,25 @@ struct ShowcaseStrings {
 
 private extension BodyLevel {
     static let allCasesForStrings: [BodyLevel] = [.low, .mid, .high]
+}
+
+/// A native lens button under a showcase card. Labels come from the run's
+/// strings, so a Japanese run never shows English.
+enum ShowcaseButton: Equatable, Sendable {
+    case previous, why, next, choose
+    case back(name: String)
+
+    /// `.next` is the ▶ arrow beside ◀, and the word "Next" otherwise.
+    func label(in strings: ShowcaseStrings, among buttons: [ShowcaseButton]) -> String {
+        switch self {
+        case .previous: return strings.previousArrow
+        case .why: return strings.why
+        case .next: return buttons.contains(.previous) ? strings.nextArrow : strings.next
+        case .choose: return strings.choose
+        case .back(let name): return strings.backTo(name)
+        }
+    }
+
+    /// The one filled button: Why on the deck, Choose on the Why card.
+    var isPrimary: Bool { self == .why || self == .choose }
 }

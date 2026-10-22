@@ -246,7 +246,7 @@ private struct FittedName: View {
             line(text, 48)
             line(text, 44)
             line(text, 40)
-            ForEach(Self.twoLineSplits(text), id: \.self) { split in
+            ForEach(lensTwoLineSplits(text), id: \.self) { split in
                 line(split, LensArtMetrics.nameMinSize)
             }
             Text(text)
@@ -264,21 +264,21 @@ private struct FittedName: View {
             .lineSpacing(-4)
             .fixedSize()
     }
+}
 
-    /// Every "first\nsecond" split at a space, the most balanced first. A
-    /// space right after a leading emoji is not a break.
-    static func twoLineSplits(_ text: String) -> [String] {
-        let words = text.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
-        guard words.count > 1 else { return [] }
-        var splits: [(String, Int)] = []
-        for i in 1..<words.count {
-            let first = words[..<i].joined(separator: " ")
-            let second = words[i...].joined(separator: " ")
-            if i == 1, !first.contains(where: \.isLetter) { continue }
-            splits.append((first + "\n" + second, abs(first.count - second.count)))
-        }
-        return splits.sorted { $0.1 < $1.1 }.map(\.0)
+/// Every "first\nsecond" split at a space, the most balanced first. A space
+/// right after a leading emoji is not a break. Shared with the scan clip.
+func lensTwoLineSplits(_ text: String) -> [String] {
+    let words = text.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
+    guard words.count > 1 else { return [] }
+    var splits: [(String, Int)] = []
+    for i in 1..<words.count {
+        let first = words[..<i].joined(separator: " ")
+        let second = words[i...].joined(separator: " ")
+        if i == 1, !first.contains(where: \.isLetter) { continue }
+        splits.append((first + "\n" + second, abs(first.count - second.count)))
     }
+    return splits.sorted { $0.1 < $1.1 }.map(\.0)
 }
 
 /// The function tag: monospaced caps in English as in deck-v3; Japanese
@@ -393,8 +393,9 @@ private struct RGB {
     }
 }
 
-fileprivate extension Color {
-    /// "#RRGGBB" as a colour. Private to the lens art: HermesDesign's
-    /// `Color(hex: UInt32)` sits in a UIKit file the macOS suite can't build.
+extension Color {
+    /// "#RRGGBB" as a colour, shared by the lens art and the clips
+    /// (ClipArt). HermesDesign's `Color(hex: UInt32)` sits in a UIKit file
+    /// the macOS suites can't build.
     init(hex: String) { self = RGB(hex: hex).color }
 }

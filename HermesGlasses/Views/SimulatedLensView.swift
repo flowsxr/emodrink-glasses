@@ -9,7 +9,9 @@
 // on the lens is decided by HermesDisplayManager, exactly as for glasses.
 //
 
+import AVFoundation
 import SwiftUI
+import UIKit
 
 struct SimulatedLensView: View {
     let content: LensContent
@@ -24,6 +26,10 @@ struct SimulatedLensView: View {
             HermesScreenTitle(
                 text: "EMODRINK", size: 13, tint: HermesTheme.accentLight.opacity(0.9)
             )
+
+            if case .showcase(let image, let clip) = content {
+                showcaseMedia(image: image, clip: clip)
+            }
 
             if let label = content.label {
                 Text(label)
@@ -92,7 +98,7 @@ struct SimulatedLensView: View {
         .overlay(alignment: .topLeading) {
             // The tag is the honesty label: this is a stand-in, at the real
             // lens's aspect, not a Hermes screen invented for the phone.
-            Text("SIMULATED LENS · \(resolutionLabel)")
+            Text("SIMULATED LENS · \(tagLabel)")
                 .font(.system(size: 9, weight: .bold, design: .monospaced))
                 .kerning(0.5)
                 .foregroundStyle(.white)
@@ -103,6 +109,31 @@ struct SimulatedLensView: View {
                 .offset(x: 12, y: -9)
         }
         .animation(.easeOut(duration: 0.2), value: content)
+    }
+
+    /// The showcase draws the full 600 x 600 lens, not the HUD strip.
+    private var tagLabel: String {
+        if case .showcase = content { return "600×600" }
+        return resolutionLabel
+    }
+
+    /// The showcase card or clip, square and fitted on black, as on the lens.
+    private func showcaseMedia(image: UIImage?, clip: URL?) -> some View {
+        ZStack {
+            Color.black
+            if let clip {
+                ShowcaseClipPlayer(url: clip)
+            } else if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+            }
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .frame(maxWidth: compact ? 220 : .infinity)
+        .frame(maxWidth: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     /// Mirrors a button the wearer sees on the real lens.
@@ -116,5 +147,50 @@ struct SimulatedLensView: View {
             .padding(.horizontal, 9)
             .padding(.vertical, 4)
             .background(HermesTheme.accent, in: Capsule())
+    }
+}
+
+/// Plays a showcase clip once, muted, fitted on black. A new URL restarts it.
+private struct ShowcaseClipPlayer: UIViewRepresentable {
+    let url: URL
+
+    func makeUIView(context: Context) -> ClipPlayerView {
+        let view = ClipPlayerView()
+        view.play(url)
+        return view
+    }
+
+    func updateUIView(_ view: ClipPlayerView, context: Context) {
+        if view.url != url { view.play(url) }
+    }
+
+    static func dismantleUIView(_ view: ClipPlayerView, coordinator: ()) {
+        view.player.pause()
+    }
+}
+
+private final class ClipPlayerView: UIView {
+    let player = AVPlayer()
+    private(set) var url: URL?
+
+    override class var layerClass: AnyClass { AVPlayerLayer.self }
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = .black
+        player.isMuted = true
+        player.actionAtItemEnd = .pause
+        if let layer = layer as? AVPlayerLayer {
+            layer.player = player
+            layer.videoGravity = .resizeAspect
+        }
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    func play(_ url: URL) {
+        self.url = url
+        player.replaceCurrentItem(with: AVPlayerItem(url: url))
+        player.play()
     }
 }

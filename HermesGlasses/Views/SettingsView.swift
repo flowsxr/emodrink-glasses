@@ -143,6 +143,7 @@ private struct GlassesPage: View {
     let wearablesVM: WearablesViewModel
     let basicsVM: GlassesBasicsViewModel
     @State private var showBasics = false
+    @AppStorage(HermesDisplayManager.clipTransportKey) private var clipTransport = "file"
 
     var body: some View {
         HermesScrollPage {
@@ -150,7 +151,7 @@ private struct GlassesPage: View {
             cameraSection
             phoneModeSection
             HermesSection(header: "Developer",
-                          footer: "Glasses basics: the three on-device tests (lens card, camera feed, vending machine check) on the same glasses path EmoDrink uses.") {
+                          footer: "Glasses basics: the three on-device tests (lens card, camera feed, vending machine check) on the same glasses path EmoDrink uses. Local HTTP serves showcase clips from 127.0.0.1 instead of sending a file:// URI.") {
                 Button {
                     showBasics = true
                 } label: {
@@ -171,6 +172,12 @@ private struct GlassesPage: View {
                     HermesRow("Showcase spikes", icon: "scope", mutedIcon: true, value: "Video, speech, inputs")
                 }
                 .buttonStyle(.plain)
+                HermesDivider()
+                Toggle(isOn: Binding(get: { clipTransport == "http" },
+                                     set: { clipTransport = $0 ? "http" : "file" })) {
+                    HermesRow("Showcase clips over local HTTP", icon: "network", mutedIcon: true, showsChevron: false)
+                }
+                .padding(.trailing, 16)
             }
         }
         .fullScreenCover(isPresented: $showBasics) {

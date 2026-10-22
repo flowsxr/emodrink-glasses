@@ -10,9 +10,11 @@
 // are attached.
 //
 
+import AVFoundation
 import Foundation
 import MWDATDisplay
 import os
+import UIKit
 
 enum DisplayHUDStatus: Equatable {
     case off                    // toggle disabled or no session
@@ -81,6 +83,18 @@ final class HermesDisplayManager {
     private var dwellTask: Task<Void, Never>?
     private var throttle = DisplaySendThrottle()
     private var lastReplyText: String = ""
+    /// The showcase card's button handler (see showShowcaseCard).
+    private var onShowcaseTap: ((ShowcaseButton) -> Void)?
+    /// Serves the playing clip in "http" transport; stopped when the clip
+    /// ends or anything replaces it.
+    private var clipServer: LocalClipServer?
+    /// Bumped by every clip and every other screen, so a clip whose server
+    /// start or send finishes late knows it was replaced.
+    private var clipGeneration = 0
+
+    /// Developer setting (Ruling 1): "file" (default) sends a clip as its
+    /// file:// URI; "http" serves it from LocalClipServer on 127.0.0.1.
+    nonisolated static let clipTransportKey = "showcase_clip_transport"
 
     init(link: GlassesLink) {
         self.link = link
@@ -110,6 +124,7 @@ final class HermesDisplayManager {
     /// attached to GlassesLink's session for the next activate.
     func deactivate() {
         cancelDwell()
+        stopClipServer()
         queuedView = nil
         lastReplyText = ""
         let wasActive = isActive
@@ -258,6 +273,79 @@ final class HermesDisplayManager {
             }))
     }
 
+    // MARK: - Showcase
+
+    /// A rendered showcase card with native buttons, through the serialized
+    /// send queue. A tap calls `onTap` on the main actor.
+    func showShowcaseCard(_ image: UIImage, buttons: [ShowcaseButton], strings: ShowcaseStrings,
+                          onTap: @escaping (ShowcaseButton) -> Void) {
+        content = .showcase(image: image, clip: nil)
+        cancelDwell()
+        lastReplyText = ""
+        onShowcaseTap = onTap
+        send(ShowcaseLens.card(image, buttons: buttons, strings: strings, onTap: { [weak self] button in
+            Task { @MainActor in self?.onShowcaseTap?(button) }
+        }))
+    }
+
+    /// Plays a rendered clip full screen through GlassesLink.sendVideo, as a
+    /// file:// URI or over local HTTP (`clipTransportKey`). The phone mirror
+    /// gets the clip first, glasses or not. True when the lens took it.
+    @discardableResult
+    func playShowcaseClip(_ fileURL: URL) async -> Bool {
+        let next = LensContent.showcase(image: nil, clip: fileURL)
+        if content == next { onContentChanged?(next) } else { content = next }
+        cancelDwell()
+        lastReplyText = ""
+        onShowcaseTap = nil
+        stopClipServer()
+        clipGeneration += 1
+        let generation = clipGeneration
+        guard isActive else { return false }
+
+        // A card already on its way lands first, so it cannot cover the clip.
+        queuedView = nil
+        await sendTask?.value
+        guard generation == clipGeneration, isActive else { return false }
+
+        var uri = fileURL.absoluteString
+        if UserDefaults.standard.string(forKey: Self.clipTransportKey) == "http" {
+            let server = LocalClipServer(fileURL: fileURL)
+            do {
+                let url = try await server.start()
+                guard generation == clipGeneration else {
+                    server.stop()
+                    return false
+                }
+                clipServer = server
+                uri = url.absoluteString
+            } catch {
+                debug("Clip server failed (\(error)); sending the file URI")
+            }
+        }
+        let sent = await link.sendVideo(uri: uri, label: "showcase clip")
+        if !sent { debug("Clip send failed (display \(link.displayStateText))") }
+        if clipServer != nil, generation == clipGeneration {
+            scheduleClipServerStop(for: fileURL, generation: generation)
+        }
+        return sent
+    }
+
+    /// The clip has ended a little after its own length: stop serving it.
+    private func scheduleClipServerStop(for fileURL: URL, generation: Int) {
+        Task { [weak self] in
+            let seconds = (try? await AVURLAsset(url: fileURL).load(.duration).seconds) ?? 15
+            try? await Task.sleep(nanoseconds: UInt64((max(seconds, 1) + 3) * 1_000_000_000))
+            guard let self, generation == self.clipGeneration else { return }
+            self.stopClipServer()
+        }
+    }
+
+    private func stopClipServer() {
+        clipServer?.stop()
+        clipServer = nil
+    }
+
     func showNewConversationFlash() {
         content = .newConversation
         cancelDwell()
@@ -311,6 +399,9 @@ final class HermesDisplayManager {
     /// order otherwise). While the display is not started GlassesLink holds
     /// the view until it is (or 10 s pass).
     private func send(_ view: FlexBox) {
+        // Anything sent replaces a playing showcase clip.
+        clipGeneration += 1
+        stopClipServer()
         guard isActive else { return }
         queuedView = view
         guard sendTask == nil else { return }  // drain loop already running

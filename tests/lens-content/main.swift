@@ -90,16 +90,23 @@ let watchingEn = LensContent.emoDrinkWatching(heading: "Drink mode", text: "Watc
 expectEqual(watchingEn.label, "DRINK MODE", "English heading is upper-cased")
 expect(watchingEn.isLive && !watchingEn.isBlank, "watching is live")
 
+// MARK: - showcase: the picture carries the text
+
+let showcaseClip = LensContent.showcase(image: nil, clip: URL(fileURLWithPath: "/tmp/clip.mp4"))
+expect(showcaseClip.body.isEmpty && showcaseClip.label == nil && showcaseClip.statusLine == nil, "showcase draws no text")
+expect(showcaseClip.choices.isEmpty, "showcase buttons are native, not choices")
+expect(showcaseClip.isLive && !showcaseClip.isBlank, "showcase is live")
+
 // MARK: - every case answers every question
 
 let all: [LensContent] = [
     .blank, .listening(partial: "a"), .thinking(query: "b"), .photoCaptured,
-    .reply(text: "c", speaking: true), .newConversation, card, pickOne, watchingEn,
+    .reply(text: "c", speaking: true), .newConversation, card, pickOne, watchingEn, showcaseClip,
 ]
 for content in all {
     _ = content.label; _ = content.body; _ = content.statusLine; _ = content.isLive; _ = content.isBlank; _ = content.choices
 }
-expect(all.count == 9, "all 9 cases covered")
+expect(all.count == 10, "all 10 cases covered")
 
 print(failures == 0 ? "\nALL PASS" : "\n\(failures) FAILURE(S)")
 exit(failures == 0 ? 0 : 1)
