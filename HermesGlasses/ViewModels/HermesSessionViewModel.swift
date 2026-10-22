@@ -671,7 +671,8 @@ final class HermesSessionViewModel {
             if micSource == .headset && !bluetoothActive { show(notice: Self.headsetMicFallbackNotice) }
             if micSource == .glassesSpeech {
                 // The glasses transcribe; the recognizer stays stopped.
-                let heard = await beginGlassesSpeech(sessionGen: gen)
+                // Start the recognizer once, below, on any failure.
+                let heard = await beginGlassesSpeech(sessionGen: gen, startRecognizerOnFallback: false)
                 guard gen == sessionGeneration else { return }
                 if !heard {
                     // A failed capability start has already fallen back.
@@ -1070,6 +1071,10 @@ final class HermesSessionViewModel {
                 // A failed capability start has already fallen back.
                 if micSource == .glassesSpeech {
                     fallBackFromGlassesSpeech("could not start", announce: announceFallback)
+                } else if !glassesSpeechInUse, speechAuthorized {
+                    // Another mic was picked during the wait: the
+                    // recognizer stopped above must hear again.
+                    try? speechRecognizer.start()
                 }
                 reconcileLensHUD()
                 return .routeUnavailable
@@ -1095,22 +1100,24 @@ final class HermesSessionViewModel {
     /// setting off, a locale known not to match the session's language, no
     /// glasses session, or the capability refused. Starts listening at once
     /// unless listening is suspended (resume starts it).
-    private func beginGlassesSpeech(sessionGen: Int) async -> Bool {
+    private func beginGlassesSpeech(sessionGen: Int, startRecognizerOnFallback: Bool = true) async -> Bool {
         guard glassesSpeechEnabled else { return false }
         guard GlassesSpeechRouting.locale(glassesLink.glassesSpeechLocale, matches: activeLanguage) != false else {
             NSLog("[EmoDrink] glasses speech locale \(glassesLink.glassesSpeechLocale ?? "-") does not hear \(activeLanguage.rawValue)")
             return false
         }
         guard await glassesLink.ensureSession(timeout: 8), sessionGen == sessionGeneration else { return false }
+        // The setting or the mic may have changed during the wait.
+        guard glassesSpeechEnabled, micSource == .glassesSpeech else { return false }
         glassesSpeechInUse = true
         if speechRecognizer.isSuspended { return true }
-        return resumeGlassesSpeech()
+        return resumeGlassesSpeech(startRecognizerOnFallback: startRecognizerOnFallback)
     }
 
     /// Start (again) the glasses' capability. A failure falls back to the
     /// iPhone mic.
     @discardableResult
-    private func resumeGlassesSpeech() -> Bool {
+    private func resumeGlassesSpeech(startRecognizerOnFallback: Bool = true) -> Bool {
         guard glassesSpeechInUse else { return false }
         glassesSpeechGeneration += 1
         let gen = glassesSpeechGeneration
@@ -1120,11 +1127,11 @@ final class HermesSessionViewModel {
             onLocale: { [weak self] _ in self?.checkGlassesSpeechLocale(gen) }
         )
         guard started else {
-            fallBackFromGlassesSpeech("capability did not start")
+            fallBackFromGlassesSpeech("capability did not start", startRecognizer: startRecognizerOnFallback)
             return false
         }
         glassesSpeechRunning = true
-        checkGlassesSpeechLocale(gen)
+        checkGlassesSpeechLocale(gen, startRecognizerOnFallback: startRecognizerOnFallback)
         return glassesSpeechRunning
     }
 
@@ -1151,11 +1158,12 @@ final class HermesSessionViewModel {
 
     /// The glasses hear another language than the session speaks: useless,
     /// so the iPhone mic takes over.
-    private func checkGlassesSpeechLocale(_ gen: Int) {
+    private func checkGlassesSpeechLocale(_ gen: Int, startRecognizerOnFallback: Bool = true) {
         guard gen == glassesSpeechGeneration, glassesSpeechInUse,
               GlassesSpeechRouting.locale(glassesLink.glassesSpeechLocale, matches: activeLanguage) == false
         else { return }
-        fallBackFromGlassesSpeech("locale \(glassesLink.glassesSpeechLocale ?? "-") is not \(activeLanguage.rawValue)")
+        fallBackFromGlassesSpeech("locale \(glassesLink.glassesSpeechLocale ?? "-") is not \(activeLanguage.rawValue)",
+                                  startRecognizer: startRecognizerOnFallback)
     }
 
     /// Back to the iPhone mic, as the other mic fallbacks do: the saved
