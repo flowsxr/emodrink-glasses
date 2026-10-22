@@ -55,6 +55,7 @@
 		AAAA00000000000000000A63 /* EmoDrink/ChangeGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000A64 /* EmoDrink/ChangeGate.swift */; };
 		AAAA00000000000000000E01 /* EmoDrink/PhysiologySnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E02 /* EmoDrink/PhysiologySnapshot.swift */; };
 		AAAA00000000000000000F23 /* DrinkNameMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F24 /* DrinkNameMatcher.swift */; };
+		AAAA00000000000000000F70 /* ShowcasePersona.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F71 /* ShowcasePersona.swift */; };
 		AAAA00000000000000000F21 /* VendingMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F22 /* VendingMachine.swift */; };
 		AAAA00000000000000000F33 /* ShowcaseStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F34 /* ShowcaseStrings.swift */; };
 		AAAA00000000000000000F37 /* ShowcaseDirector.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F38 /* ShowcaseDirector.swift */; };
@@ -145,6 +146,7 @@
 		AAAA00000000000000000A64 /* EmoDrink/ChangeGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/ChangeGate.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E02 /* EmoDrink/PhysiologySnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/PhysiologySnapshot.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F24 /* DrinkNameMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/DrinkNameMatcher.swift; sourceTree = "<group>"; };
+		AAAA00000000000000000F71 /* ShowcasePersona.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/ShowcasePersona.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F22 /* VendingMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/VendingMachine.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F34 /* ShowcaseStrings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/ShowcaseStrings.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000F38 /* ShowcaseDirector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Showcase/ShowcaseDirector.swift; sourceTree = "<group>"; };
@@ -285,6 +287,7 @@
 				AAAA00000000000000000A64 /* EmoDrink/ChangeGate.swift */,
 				AAAA00000000000000000E02 /* EmoDrink/PhysiologySnapshot.swift */,
 				AAAA00000000000000000F24 /* DrinkNameMatcher.swift */,
+				AAAA00000000000000000F71 /* ShowcasePersona.swift */,
 				AAAA00000000000000000F22 /* VendingMachine.swift */,
 				AAAA00000000000000000F34 /* ShowcaseStrings.swift */,
 				AAAA00000000000000000F38 /* ShowcaseDirector.swift */,
@@ -447,6 +450,7 @@
 				AAAA00000000000000000A63 /* EmoDrink/ChangeGate.swift in Sources */,
 				AAAA00000000000000000E01 /* EmoDrink/PhysiologySnapshot.swift in Sources */,
 				AAAA00000000000000000F23 /* DrinkNameMatcher.swift in Sources */,
+				AAAA00000000000000000F70 /* ShowcasePersona.swift in Sources */,
 				AAAA00000000000000000F21 /* VendingMachine.swift in Sources */,
 				AAAA00000000000000000F33 /* ShowcaseStrings.swift in Sources */,
 				AAAA00000000000000000F37 /* ShowcaseDirector.swift in Sources */,
