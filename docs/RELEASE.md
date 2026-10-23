@@ -70,6 +70,18 @@ EmoDrink.
 
 Not yet done on a device; the build was written without glasses.
 
+**The results change CODE DEFAULTS, before the handover build.** The
+Developer toggles (`showcase_clip_transport`, `showcase_glasses_swipe`,
+`showcase_glasses_speech`) are per-device settings: flipping them on the
+owner's phone does not reach Taka's install. Whatever the spikes prove goes
+into the defaults in code, then the build number is bumped:
+
+- clip transport: the `== "http"` check in
+  `HermesDisplayManager.playShowcaseClip` (file is the fallthrough) and the
+  `"file"` `@AppStorage` default in `SettingsView`;
+- swipe: `ShowcaseViewModel.glassesSwipeDefault` (now `false`);
+- glasses speech: `GlassesSpeechRouting.isEnabled` (`defaults.bool`, so off).
+
 - **Showcase spikes panel** (Settings › Glasses › Developer › Showcase
   spikes): video by file and by http, card latency, and glasses speech.
   Record which clip transport plays and set `showcase_clip_transport` to it.

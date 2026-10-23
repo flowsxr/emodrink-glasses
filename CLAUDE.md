@@ -205,15 +205,41 @@ or the iPhone camera in phone mode.
 - **One display queue carries cards AND clips.** `HermesDisplayManager`'s
   serialized queue sends both, and `stopVideo` runs before a card replaces a
   clip. Bypassing the queue is how a card ended up under a playing clip.
+  `playShowcaseClip` returns a `ClipOutcome`; on `.failed` (glasses in reach,
+  nothing newer queued) the view model sends the clip's art at t = 1 as a
+  still card with no buttons, so the lens is never blank for the step. With
+  no glasses at all it is `.noLens` and the mirror keeps the clip.
 - **The showcase session has no vision and no context.** It starts through
   `startSessionWithoutVision` (no camera prompt mid-run, no device-context
-  fetch), and its problems go to `runNotice`, never alerts. Live drink mode
-  REPLACES such a session (it does not inherit it); Settings is locked during
-  a run.
-- **`showcaseClaimer` claims EVERY utterance during a run**, before
-  `emoDrinkClaimer`; the runner answers through the one-shot AI so the normal
-  assistant card never replaces the deck. The guest cannot reach the general
-  assistant mid-demo (intended).
+  fetch). It stays up after a run for the next guest; live drink mode
+  REPLACES it (it does not inherit it), and add-by-voice ends it
+  (`endIdleSession`). Settings is locked during a run. It activates the lens
+  whatever the vision route (HUD on, no call screen), because it is reused:
+  glasses out of reach at the first Start still get later runs, and Start
+  also calls `ensureShowcaseLens` for a reused session.
+- **During a run, problems are the run notice, never alerts.**
+  `showcaseRunActive` plus `showcaseIssueSink`, set by ShowcaseViewModel for
+  the WHOLE run: `reportError` / `reportNotice` (session errors, the glasses
+  speech fallback, mic and start problems) go there instead of
+  `show(...)`. With no run active they alert as before.
+- **`showcaseClaimer` claims EVERY utterance while `showcaseOwnsVoice`**: a
+  run, or the showcase's own (no-vision) session between runs. Consulted
+  before `emoDrinkClaimer`; during a run the runner answers through the
+  one-shot AI so the normal assistant card never replaces the deck; between
+  runs everything is swallowed, so nothing starts a drink moment whose timer
+  would clear the next run's lens. Listening partials stay off the lens
+  meanwhile. The guest cannot reach the general assistant (intended). Start
+  calls `EmoDrinkViewModel.stopForShowcase`, which also ends a "what should I
+  drink" moment with drink mode off.
+- **A run borrows, never keeps, app-wide settings.** Start notes
+  `emodrink_language` and the saved `mic_source`; teardown (end or Reset)
+  writes them back, so "auto" and a headset choice survive. The showcase
+  session keeps the language it resolved and the iPhone mic it has;
+  `endSession` of a no-vision session reloads `micSource` from the saved
+  choice.
+- **A Japanese run speaks only Japanese.** `ShowcaseReply.speakable` drops an
+  AI reply with no hiragana, katakana or kanji (the scripted line is spoken),
+  and a strong drink's tag reads カフェイン入り, never "mg".
 - **`SpeechFinishGate` guards stale finishes** of the speech synthesizer, so a
   cancelled line's finish callback cannot advance the next step.
 - **Glasses input is two settings.** Swipe (`showcase_glasses_swipe`, default
