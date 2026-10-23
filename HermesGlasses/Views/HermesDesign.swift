@@ -160,16 +160,17 @@ struct HermesLockup: View {
                 .fill(tint)
                 .frame(width: height * 1.95, height: height)
 
-            HStack(spacing: 0) {
-                Text("EMODRINK")
-                    .font(.system(size: height, weight: .heavy))
-                if showsSuffix {
-                    Text("GLASSES")
-                        .font(.system(size: height, weight: .light))
-                }
-            }
-            .kerning(height * 0.06)
-            .foregroundStyle(tint)
+            // One concatenated Text, not an HStack of two: "EMODRINK" is
+            // long enough that the onboarding size wrapped it mid-word
+            // ("EMODRI / NK") with "GLASSES" floating beside it. A single
+            // Text keeps one baseline and can shrink as a unit to fit.
+            (Text("EMODRINK").font(.system(size: height, weight: .heavy))
+                + Text(showsSuffix ? "GLASSES" : "")
+                    .font(.system(size: height, weight: .light)))
+                .kerning(height * 0.06)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .foregroundStyle(tint)
         }
         .accessibilityElement()
         .accessibilityLabel(showsSuffix ? "EmoDrink Glasses" : "EmoDrink")
