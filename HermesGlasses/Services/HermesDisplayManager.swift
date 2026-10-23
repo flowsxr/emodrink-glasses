@@ -322,11 +322,25 @@ final class HermesDisplayManager {
         }))
     }
 
+    /// What became of a showcase clip on the real lens.
+    enum ClipOutcome: Equatable {
+        /// The lens took it.
+        case played
+        /// Something newer replaced it (a card, a clear, another clip).
+        case superseded
+        /// No real lens to play on (HUD off, glasses absent or not
+        /// attached): the phone mirror plays it alone.
+        case noLens
+        /// The lens (glasses in reach) did not take it: nothing newer is
+        /// on its way, so the caller should put something else up.
+        case failed
+    }
+
     /// Plays a rendered clip full screen through GlassesLink.sendVideo, as a
     /// file:// URI or over local HTTP (`clipTransportKey`). The phone mirror
-    /// gets the clip first, glasses or not. True when the lens took it.
+    /// gets the clip first, glasses or not.
     @discardableResult
-    func playShowcaseClip(_ fileURL: URL) async -> Bool {
+    func playShowcaseClip(_ fileURL: URL) async -> ClipOutcome {
         let next = LensContent.showcase(image: nil, clip: fileURL)
         if content == next { onContentChanged?(next) } else { content = next }
         cancelDwell()
@@ -335,7 +349,7 @@ final class HermesDisplayManager {
         stopClipServer()
         clipGeneration += 1
         let generation = clipGeneration
-        guard isActive else { return false }
+        guard isActive else { return .noLens }
 
         var uri = fileURL.absoluteString
         if UserDefaults.standard.string(forKey: Self.clipTransportKey) == "http" {
@@ -344,7 +358,7 @@ final class HermesDisplayManager {
                 let url = try await server.start()
                 guard generation == clipGeneration else {
                     server.stop()
-                    return false
+                    return .superseded
                 }
                 clipServer = server
                 uri = url.absoluteString
@@ -352,9 +366,10 @@ final class HermesDisplayManager {
                 debug("Clip server failed (\(error)); sending the file URI")
             }
         }
-        guard generation == clipGeneration, isActive else { return false }
+        guard generation == clipGeneration else { return .superseded }
+        guard isActive else { return .noLens }
         // Through the same serialized pipeline as the cards: one send in
-        // flight, newest wins (a superseded clip returns false).
+        // flight, newest wins (a superseded clip hears false).
         let sent = await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
             enqueue(.video(uri: uri, completion: continuation))
         }
@@ -362,7 +377,11 @@ final class HermesDisplayManager {
         if clipServer != nil, generation == clipGeneration {
             scheduleClipServerStop(for: fileURL, generation: generation)
         }
-        return sent && generation == clipGeneration
+        guard generation == clipGeneration else { return .superseded }
+        if sent { return .played }
+        // Glasses in reach (or a lens up) that did not take it, versus no
+        // glasses at all, where the mirror keeps playing the clip.
+        return isActive && (link.isDisplayReady || link.deviceReady) ? .failed : .noLens
     }
 
     /// The clip has ended a little after its own length: stop serving it.

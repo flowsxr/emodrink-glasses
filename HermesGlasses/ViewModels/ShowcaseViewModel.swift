@@ -8,9 +8,13 @@
 // ShowcaseRunner to the real lens (HermesDisplayManager through the session
 // view model), the voice (speakCueAndWait) and the AI (a 6 s one-shot call).
 //
-// While a run is active it claims every utterance (Ruling T8) through
-// `HermesSessionViewModel.showcaseClaimer`; the claimer and the persona
-// override are cleared when the run ends or is reset.
+// It claims every utterance through `HermesSessionViewModel.showcaseClaimer`
+// while the showcase owns the voice loop: during a run (Ruling T8) the
+// runner answers, and between runs, while its session stays up for the next
+// guest, everything is swallowed. During a run, problems go to the run
+// notice, never alerts. The persona override, the run notice sink and the
+// app-wide language and mic it borrowed are given back when the run ends or
+// is reset.
 //
 
 import Foundation
@@ -106,6 +110,14 @@ final class ShowcaseViewModel {
     @ObservationIgnored private var runStrings = ShowcaseStrings(language: ShowcaseDefaults.defaultLanguage)
     /// Bumped by every start and reset: a start resuming after reset stops.
     @ObservationIgnored private var startGeneration = 0
+    /// The app-wide settings a run saves over (the language setting and the
+    /// saved mic), as stored before the first Start; put back at teardown
+    /// so "auto" and a headset choice survive the showcase.
+    private struct BorrowedSettings {
+        let language: String?
+        let mic: String?
+    }
+    @ObservationIgnored private var borrowed: BorrowedSettings?
 
     @ObservationIgnored private var debounceTask: Task<Void, Never>?
     @ObservationIgnored private var renderTask: Task<Void, Never>?
@@ -125,6 +137,8 @@ final class ShowcaseViewModel {
             .flatMap { try? JSONDecoder().decode(GuestProfile.self, from: $0) } ?? .preset(.assumed)
         language = defaults.string(forKey: Self.languageKey).flatMap(Language.init(rawValue:))
             ?? ShowcaseDefaults.defaultLanguage
+        // Consulted only while the showcase owns the voice loop.
+        hermesVM.showcaseClaimer = { [weak self] text in self?.claim(text) ?? false }
         schedulePrerender()
     }
 
@@ -163,15 +177,19 @@ final class ShowcaseViewModel {
         runNotice = nil
         let lang = language
         let strings = ShowcaseStrings(language: lang)
-        // Claimed from the first moment: the guest may talk while clips render.
-        hermesVM.showcaseClaimer = { [weak self] text in self?.claim(text) ?? false }
+        // Claimed from the first moment: the guest may talk while clips
+        // render. Problems from here on are Taka's run notice.
+        hermesVM.showcaseRunActive = true
+        hermesVM.showcaseIssueSink = { [weak self] message in self?.noteRunIssue(message) }
+        borrowSettings()
 
         // Only with the swipe setting on: no inputs capability otherwise.
         if defaults.object(forKey: Self.glassesSwipeKey) as? Bool ?? Self.glassesSwipeDefault {
             hermesVM.glassesLink.observeNavigation(Self.navKey) { [weak self] nav in self?.navigated(nav) }
         }
 
-        // Two autopilots on one lens would fight (Ruling 3).
+        // Two autopilots on one lens would fight (Ruling 3). Also ends a
+        // drink moment from "what should I drink", drink mode on or not.
         stopLiveDrinkMode()
 
         // Language is resolved once per session: a running session in the
@@ -197,23 +215,24 @@ final class ShowcaseViewModel {
         // Voice and lens only: no camera, so no camera prompt mid-run, and
         // start-up problems (a mic switch included) become Taka's run
         // notice instead of an alert.
+        // A reused showcase session already has its mic: no switch.
         var issues: [String] = []
-        if !(glassesSpeech && hermesVM.micSource == .glassesSpeech && hermesVM.connectionState != .disconnected) {
-            _ = await hermesVM.setMicSourceQuietly(glassesSpeech ? .glassesSpeech : .phone) { issues.append($0) }
+        let mic: MicSource = glassesSpeech ? .glassesSpeech : .phone
+        if !(hermesVM.micSource == mic && hermesVM.connectionState != .disconnected) {
+            _ = await hermesVM.setMicSourceQuietly(mic) { issues.append($0) }
         }
         guard gen == startGeneration else { return }
         if hermesVM.connectionState == .disconnected {
             await hermesVM.startSessionWithoutVision { issues.append($0) }
         }
         guard gen == startGeneration else { return }
+        // A reused session whose glasses were out of reach at its start.
+        hermesVM.ensureShowcaseLens()
         hermesVM.logVisionDiagnostics("showcase start")
         // No session (no key, audio failure): the run still plays on the
         // lens and the phone mirror, but nobody is listening.
-        if hermesVM.connectionState == .disconnected {
-            runNotice = ([strings.noVoiceSession] + issues).joined(separator: " ")
-        } else if !issues.isEmpty {
-            runNotice = issues.joined(separator: " ")
-        }
+        if hermesVM.connectionState == .disconnected { issues.insert(strings.noVoiceSession, at: 0) }
+        issues.forEach(noteRunIssue)
 
         let run: ShowcaseRun
         do {
@@ -234,6 +253,22 @@ final class ShowcaseViewModel {
         runner.onStepChange = { [weak self] step in self?.runnerStepChanged(step) }
         self.runner = runner
         await runner.start()
+    }
+
+    /// The showcase's session, left up after a run so the next guest
+    /// starts fast, holds the mic with no run on.
+    var idleSessionHoldsMic: Bool {
+        !running && hermesVM.connectionState != .disconnected && !hermesVM.sessionUsesVision
+    }
+
+    /// Ends that idle session (add-by-voice needs the mic); the next Start
+    /// opens a new one. Nothing while a run is on or another session runs.
+    func endIdleSession() async {
+        guard idleSessionHoldsMic else { return }
+        hermesVM.endSession()
+        for _ in 0..<50 where hermesVM.connectionState != .disconnected {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
     }
 
     func reset() {
@@ -262,11 +297,15 @@ final class ShowcaseViewModel {
         }
     }
 
-    /// The run is over: release the voice loop back to the assistant.
+    /// The run is over. Its session, if any, stays up for the next guest
+    /// and keeps the voice loop (`showcaseOwnsVoice`) until live drink mode
+    /// or a Stop ends it; alerts and the borrowed settings come back now.
     private func teardown() {
         hermesVM.glassesLink.stopObservingNavigation(Self.navKey)
-        hermesVM.showcaseClaimer = nil
         hermesVM.setPersonaOverride(nil)
+        hermesVM.showcaseRunActive = false
+        hermesVM.showcaseIssueSink = nil
+        restoreSettings()
         runner = nil
         currentRun = nil
         runJob = nil
@@ -274,12 +313,46 @@ final class ShowcaseViewModel {
         step = .idle
     }
 
+    /// Offered every utterance while the showcase owns the voice loop: a
+    /// run's go to the runner, and between runs (or before the runner
+    /// exists) they are swallowed, so nothing reaches the assistant or
+    /// starts a drink moment that could fire into the next run.
     private func claim(_ text: String) -> Bool {
-        guard running else { return false }
-        if let runner {
+        if running, let runner {
             Task { _ = await runner.handleUtterance(text) }
         }
         return true
+    }
+
+    /// A problem during the run: Taka's run notice, once per message.
+    private func noteRunIssue(_ message: String) {
+        guard running, !message.isEmpty else { return }
+        if let current = runNotice {
+            if !current.contains(message) { runNotice = current + " " + message }
+        } else {
+            runNotice = message
+        }
+    }
+
+    /// Notes the app-wide settings a run saves over, once until restored.
+    private func borrowSettings() {
+        guard borrowed == nil else { return }
+        borrowed = BorrowedSettings(language: UserDefaults.standard.string(forKey: EmoDrinkLanguage.settingKey),
+                                    mic: hermesVM.savedMicSourceSetting)
+    }
+
+    /// Puts back the language setting and the saved mic. The showcase
+    /// session keeps the language it resolved and the mic it has; the
+    /// next session (live drink mode, or a run's restart) reads these.
+    private func restoreSettings() {
+        guard let saved = borrowed else { return }
+        borrowed = nil
+        if let language = saved.language {
+            UserDefaults.standard.set(language, forKey: EmoDrinkLanguage.settingKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: EmoDrinkLanguage.settingKey)
+        }
+        hermesVM.restoreSavedMicSource(saved.mic)
     }
 
     /// Swipe forward/back rotate the deck; deck step only. Select is left
@@ -419,6 +492,9 @@ final class ShowcaseViewModel {
 extension ShowcaseViewModel: ShowcaseEffects {
     /// Sends the pre-rendered clip; the runner holds the step for the clip's
     /// length on its own clock, so a missing file or lens keeps the timing.
+    /// A lens that did not take the clip (nothing newer replaced it) gets
+    /// the clip's art at t = 1 as a still card with no buttons instead, so
+    /// it never stays blank for the step.
     func play(clip: ShowcaseClipKind) async {
         guard let job = runJob else { return }
         let url = job.url(clip)
@@ -426,7 +502,20 @@ extension ShowcaseViewModel: ShowcaseEffects {
             Self.logger.warning("No \(clip.rawValue, privacy: .public) clip on disk; the step runs without it")
             return
         }
-        await hermesVM.playShowcaseClip(url)
+        guard await hermesVM.playShowcaseClip(url) == .failed,
+              !Task.isCancelled, running, runJob?.key == job.key else { return }
+        Self.logger.warning("The lens did not take the \(clip.rawValue, privacy: .public) clip; sending a still")
+        guard let still = stillFrame(clip, job) else { return }
+        hermesVM.showShowcaseCard(still, buttons: [], strings: job.strings) { _ in }
+    }
+
+    private func stillFrame(_ clip: ShowcaseClipKind, _ job: ClipJob) -> UIImage? {
+        let strings = job.strings, run = job.run
+        switch clip {
+        case .navigate: return LensRenderer.uiImage(NavigateClipArt(machine: job.machine, strings: strings, t: 1))
+        case .morning: return LensRenderer.uiImage(MorningClipArt(snapshot: run.snapshot, strings: strings, t: 1))
+        case .scan: return LensRenderer.uiImage(ScanClipArt(machineDrinks: run.machineDrinks, strings: strings, t: 1))
+        }
     }
 
     func show(deck: ShowcaseDeck, mode: DeckMode, buttons: [ShowcaseButton]) {

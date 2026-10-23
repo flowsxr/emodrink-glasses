@@ -86,10 +86,27 @@ final class HermesSessionViewModel {
     /// here first; true = it was a reply (why / something else / thanks) and
     /// nothing reaches the brain. False = a question for the drink persona.
     @ObservationIgnored var emoDrinkClaimer: (@MainActor (String) -> Bool)?
-    /// While a showcase run is active it claims EVERY finalized utterance
-    /// (consulted before `emoDrinkClaimer`), so the assistant's reply card
-    /// never replaces the deck. Also keeps listening partials off the lens.
+    /// While the showcase owns the voice loop (`showcaseOwnsVoice`) it is
+    /// offered EVERY finalized utterance (before `emoDrinkClaimer`), so the
+    /// assistant's reply card never replaces the deck and nothing starts a
+    /// drink moment between guests. Set once by ShowcaseViewModel.
     @ObservationIgnored var showcaseClaimer: (@MainActor (String) -> Bool)?
+    /// From a showcase Start until its run ends or is reset (set by
+    /// ShowcaseViewModel), whatever session is up meanwhile.
+    @ObservationIgnored var showcaseRunActive = false
+    /// Taka's run notice: while a run is active, problems that would raise
+    /// the error or notice alert come here instead (`reportError`,
+    /// `reportNotice`). Set and cleared by ShowcaseViewModel with the run.
+    @ObservationIgnored var showcaseIssueSink: ((String) -> Void)?
+
+    /// The voice loop belongs to the showcase: during a run, and between
+    /// runs while the showcase's own session (no vision) stays up for the
+    /// next guest. Every utterance then goes to `showcaseClaimer` and no
+    /// listening partial reaches the lens. Live drink mode's session (with
+    /// vision) is never the showcase's.
+    var showcaseOwnsVoice: Bool {
+        showcaseRunActive || (connectionState != .disconnected && !sessionUsesVision)
+    }
     /// "what should I drink" / "start drink mode" / "stop drink mode".
     @ObservationIgnored var onEmoDrinkIntent: (@MainActor (HermesIntent) -> Void)?
     /// The session is being torn down; drink mode must stop its stream.
@@ -518,7 +535,7 @@ final class HermesSessionViewModel {
         guard connectionState == .disconnected || connectionState == .connecting else { return activeLanguage }
         var language = EmoDrinkLanguage.resolved
         if !speechRecognizer.setLocale(language.sttLocale) {
-            if language == .ja && announceFallback { startNotice(EmoDrinkLanguage.sttFallbackNotice) }
+            if language == .ja && announceFallback { reportNotice(EmoDrinkLanguage.sttFallbackNotice) }
             language = .en
             speechRecognizer.setLocale(Language.en.sttLocale)
         }
@@ -562,30 +579,41 @@ final class HermesSessionViewModel {
     /// simulated lens. Problems that would raise the error or notice alert
     /// go to `reportIssue` instead (Taka's run notice).
     func startSessionWithoutVision(reportIssue: @escaping (String) -> Void) async {
+        let outer = startIssueSink
         startIssueSink = reportIssue
-        defer { startIssueSink = nil }
+        defer { startIssueSink = outer }
         await startSession(engagingBrain: true, vision: false)
     }
 
     /// The showcase's mic switch: like `setMicSource(_:announceFallback: false)`,
     /// but a failure goes to `reportIssue` (the run notice), not an alert.
     func setMicSourceQuietly(_ target: MicSource, reportIssue: @escaping (String) -> Void) async -> Bool {
+        let outer = startIssueSink
         startIssueSink = reportIssue
-        defer { startIssueSink = nil }
+        defer { startIssueSink = outer }
         return await setMicSource(target, announceFallback: false)
     }
 
-    /// While a showcase start runs, its problems go here instead of an alert.
+    /// While a showcase start step runs, its problems go here (collected
+    /// into the run notice) instead of an alert.
     private var startIssueSink: ((String) -> Void)?
 
-    /// The error alert, or the showcase's run notice during its start.
-    private func startError(_ message: String) {
-        if let sink = startIssueSink { sink(message) } else { show(message) }
+    /// Where a problem goes instead of an alert: a showcase start step's
+    /// sink, else the run's sink while a run is active; nil = alert.
+    private var issueSink: ((String) -> Void)? {
+        startIssueSink ?? (showcaseRunActive ? showcaseIssueSink : nil)
     }
 
-    /// The notice alert, or the showcase's run notice during its start.
-    private func startNotice(_ message: String, action: NoticeAction? = nil) {
-        if let sink = startIssueSink { sink(message) } else { show(notice: message, action: action) }
+    /// The error alert, or the showcase's run notice during a run.
+    // Internal, not private: the +Glasses extension uses it.
+    func reportError(_ message: String) {
+        if let sink = issueSink { sink(message) } else { show(message) }
+    }
+
+    /// The notice alert, or the showcase's run notice during a run.
+    // Internal, not private: the +Glasses extension uses it.
+    func reportNotice(_ message: String, action: NoticeAction? = nil) {
+        if let sink = issueSink { sink(message) } else { show(notice: message, action: action) }
     }
 
     private func startSession(engagingBrain: Bool, vision: Bool = true) async {
@@ -619,7 +647,7 @@ final class HermesSessionViewModel {
                 if !vision {
                     // No camera to fall back to: the run plays on the
                     // simulated lens, whatever the phone-mode preference.
-                    if let issue { startNotice(issue.message, action: issue.action) }
+                    if let issue { reportNotice(issue.message, action: issue.action) }
                 } else if !VisionRouting.mayFallBackToPhone(preference: phoneModePreference) {
                     if let issue { show(notice: issue.message, action: issue.action) }
                     connectionState = .disconnected
@@ -656,7 +684,7 @@ final class HermesSessionViewModel {
         // session skips this: nothing it captures is ever sent anywhere.
         if engagingBrain {
             guard !directProvider.requiresKey || DirectClient.hasKey(for: directProvider.id) else {
-                startError("No API key set for \(directProvider.displayName). Add one in Settings.")
+                reportError("No API key set for \(directProvider.displayName). Add one in Settings.")
                 endSession()
                 startFailedGeneration = sessionGeneration
                 return
@@ -668,7 +696,7 @@ final class HermesSessionViewModel {
         guard gen == sessionGeneration else { return }
         speechAuthorized = speechOK
         if !speechOK {
-            startError(HermesSpeechError.notAuthorized.localizedDescription)
+            reportError(HermesSpeechError.notAuthorized.localizedDescription)
         }
 
         audioManager.onRawBuffer = { [weak self] buffer in
@@ -711,8 +739,8 @@ final class HermesSessionViewModel {
                 if connectionState == .disconnected { audioManager.stopCapture() }
                 return
             }
-            if micSource == .glasses && !bluetoothActive { startNotice(Self.glassesMicFallbackNotice) }
-            if micSource == .headset && !bluetoothActive { startNotice(Self.headsetMicFallbackNotice) }
+            if micSource == .glasses && !bluetoothActive { reportNotice(Self.glassesMicFallbackNotice) }
+            if micSource == .headset && !bluetoothActive { reportNotice(Self.headsetMicFallbackNotice) }
             if micSource == .glassesSpeech {
                 // The glasses transcribe; the recognizer stays stopped.
                 // Start the recognizer once, below, on any failure.
@@ -730,7 +758,7 @@ final class HermesSessionViewModel {
             }
         } catch {
             guard gen == sessionGeneration else { return }
-            startError("Audio setup failed: \(error.localizedDescription)")
+            reportError("Audio setup failed: \(error.localizedDescription)")
             endSession()
             startFailedGeneration = sessionGeneration
             return
@@ -741,7 +769,11 @@ final class HermesSessionViewModel {
         // up their call screen (a headset's hands-free link does not). In
         // phone mode nothing goes to the glasses; the simulated lens reads
         // `displayManager.content` instead, which updates either way.
-        if route == .glasses, displayHUDEnabled, !lensBlockedByCallScreen {
+        // The showcase's session (no vision) wants the lens whatever the
+        // route: it is reused for every later guest, so glasses that were
+        // out of reach at the first Start must still get the run. Every
+        // send retries the attach, and the card is redrawn when it lands.
+        if route == .glasses || !vision, displayHUDEnabled, !lensBlockedByCallScreen {
             displayManager.activate()
         }
 
@@ -758,8 +790,8 @@ final class HermesSessionViewModel {
             // are hearing Hermes's own voice
             guard !isEchoOfResponse(text) else { return }
             liveTranscript = text
-            // A showcase run owns the lens: no listening screen over the deck.
-            if showcaseClaimer == nil { displayManager.showListening(partial: text) }
+            // The showcase owns the lens: no listening screen over the deck.
+            if !showcaseOwnsVoice { displayManager.showListening(partial: text) }
             if text.split(separator: " ").count >= 2 {
                 interruptSpeech()
             }
@@ -769,8 +801,8 @@ final class HermesSessionViewModel {
             // let it overwrite the Thinking screen on the lens
             switch connectionState {
             case .listening, .recording:
-                // A showcase run owns the lens: no listening screen over the deck.
-                if showcaseClaimer == nil { displayManager.showListening(partial: text) }
+                // The showcase owns the lens: no listening screen over the deck.
+                if !showcaseOwnsVoice { displayManager.showListening(partial: text) }
             default:
                 break
             }
@@ -782,13 +814,14 @@ final class HermesSessionViewModel {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
-        // A showcase run claims every utterance: the deck follows the
-        // conversation through its own one-shot AI calls.
-        if let claim = showcaseClaimer, claim(trimmed) {
+        // The showcase claims every utterance, during a run (the deck
+        // follows the conversation through its own one-shot AI calls) and
+        // between runs (its session is still listening for the next guest).
+        if showcaseOwnsVoice, let claim = showcaseClaimer, claim(trimmed) {
             liveTranscript = ""
             lastTranscript = trimmed
             completeTestOutcome(.failure(TestFailure(
-                "The showcase claimed this utterance - reset the showcase before running this test."
+                "The showcase claimed this utterance - its session keeps the mic between guests. Open Live drink mode, or stop the session, before running this test."
             )))
             return
         }
@@ -1098,7 +1131,7 @@ final class HermesSessionViewModel {
             reconcileLensHUD()
             return outcome
         } catch {
-            startError("Mic switch failed: \(error.localizedDescription)")
+            reportError("Mic switch failed: \(error.localizedDescription)")
             endSession()
             return .sessionEnded
         }
@@ -1219,7 +1252,7 @@ final class HermesSessionViewModel {
         pauseGlassesSpeech()
         micSource = .phone
         UserDefaults.standard.set(MicSource.phone.rawValue, forKey: Self.micSourceKey)
-        if announce { startNotice(Self.glassesSpeechFallbackNotice) }
+        if announce { reportNotice(Self.glassesSpeechFallbackNotice) }
         if startRecognizer, speechAuthorized, connectionState != .disconnected {
             try? speechRecognizer.start()
         }
@@ -1237,7 +1270,7 @@ final class HermesSessionViewModel {
         guard displayHUDEnabled, glassesSessionRunning else { return }
         if lensBlockedByCallScreen {
             displayManager.deactivate()
-            startNotice("Lens HUD paused - the glasses show their call screen while their hands-free mic is on. The iPhone or a headset mic keeps the HUD visible.")
+            reportNotice("Lens HUD paused - the glasses show their call screen while their hands-free mic is on. The iPhone or a headset mic keeps the HUD visible.")
         } else if !displayManager.isActive {
             displayManager.activate()
         }
@@ -1380,9 +1413,33 @@ final class HermesSessionViewModel {
         displayManager.showShowcaseCard(image, buttons: buttons, strings: strings, onTap: onTap)
     }
 
-    @discardableResult
-    func playShowcaseClip(_ fileURL: URL) async -> Bool {
+    func playShowcaseClip(_ fileURL: URL) async -> HermesDisplayManager.ClipOutcome {
         await displayManager.playShowcaseClip(fileURL)
+    }
+
+    /// Start on a reused showcase session: glasses that came into reach
+    /// after it started get the lens now (HUD on, no call screen).
+    func ensureShowcaseLens() {
+        guard connectionState != .disconnected, !sessionUsesVision, displayHUDEnabled,
+              !lensBlockedByCallScreen, !displayManager.isActive, glassesAvailable else { return }
+        NSLog("[EmoDrink] showcase: glasses in reach, attaching the lens for the reused session")
+        displayManager.activate()
+    }
+
+    /// The mic choice as saved (nil: never chosen). The showcase reads it
+    /// at Start, since its own switch to the iPhone mic saves over it.
+    var savedMicSourceSetting: String? { UserDefaults.standard.string(forKey: Self.micSourceKey) }
+
+    /// Puts back a mic choice the showcase saved over. A running showcase
+    /// session keeps the mic it has; `micSource` follows when that session
+    /// ends (`endSession`), or at once with no session.
+    func restoreSavedMicSource(_ setting: String?) {
+        if let setting {
+            UserDefaults.standard.set(setting, forKey: Self.micSourceKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: Self.micSourceKey)
+        }
+        if connectionState == .disconnected { micSource = Self.storedMicSource() }
     }
 
     // MARK: EmoDrink surface
@@ -1429,6 +1486,9 @@ final class HermesSessionViewModel {
         glassesVision.stopLiveStream()
         phoneCameraManager.stopLiveStream()
         unpinVisionRoute()
+        // The showcase borrowed the mic for its session: the saved choice
+        // (put back after its run) applies again to the next session.
+        if !sessionUsesVision { micSource = Self.storedMicSource() }
         phoneModeActive = false
         phoneFeedImage = nil
         phoneCameraError = nil

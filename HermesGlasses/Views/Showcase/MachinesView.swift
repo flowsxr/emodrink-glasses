@@ -231,13 +231,21 @@ struct MachineEditorView: View {
     private var dictationBlockedReason: String? {
         if vm.catalog == nil { return "The catalogue is missing from this build." }
         if vm.running { return "Not during a run: the run is listening." }
-        if hermesVM.connectionState != .disconnected { return "The voice session has the mic. Stop live drink mode first." }
+        // The showcase's own session, kept up between guests, is ended on tap.
+        if hermesVM.connectionState != .disconnected, !vm.idleSessionHoldsMic {
+            return "The voice session has the mic. Stop live drink mode first."
+        }
         return nil
     }
 
     private var addSection: some View {
         Section {
-            Button { showVoice = true } label: {
+            Button {
+                Task {
+                    await vm.endIdleSession()
+                    showVoice = true
+                }
+            } label: {
                 HermesRow("Add by voice", icon: "mic",
                           subtitle: dictationBlockedReason ?? "Read the drinks aloud in \(vm.language == .ja ? "Japanese" : "English")")
             }

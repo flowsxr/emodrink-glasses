@@ -135,6 +135,9 @@ final class EmoDrinkViewModel {
     @ObservationIgnored private var drinkModeStartedAt: Date?
     /// Phone camera in the background: frames stop, so do not call it lost.
     @ObservationIgnored private var pausedForBackground = false
+    /// Bumped by `stopForShowcase`: a pick still fetching its snapshot
+    /// must not put a moment on the showcase's lens.
+    @ObservationIgnored private var pickGeneration = 0
 
     init(hermesVM: HermesSessionViewModel) {
         self.hermesVM = hermesVM
@@ -283,7 +286,8 @@ final class EmoDrinkViewModel {
             fail("The drink catalogue is missing from this build.")
             return
         }
-        guard let snapshot = await refreshSnapshot() else { return }
+        let gen = pickGeneration
+        guard let snapshot = await refreshSnapshot(), gen == pickGeneration else { return }
         let hour = Calendar.current.component(.hour, from: Date())
         guard let rec = DrinkRecommender.recommend(snapshot: snapshot, catalog: catalog, hour: hour,
                                                    lowSugar: lowSugar, language: language) else { return }
@@ -540,6 +544,15 @@ final class EmoDrinkViewModel {
     }
 
     func stopDrinkMode() { stopDrinkMode(sessionEnding: false) }
+
+    /// A showcase Start: drink mode off, and any drink moment ended
+    /// silently, drink mode on or not (a "what should I drink" moment's
+    /// timer would otherwise clear the lens and the persona mid-run).
+    func stopForShowcase() {
+        pickGeneration += 1
+        stopDrinkMode()
+        endMoment(saying: nil)
+    }
 
     private func stopDrinkMode(sessionEnding: Bool) {
         guard drinkModeOn else { return }

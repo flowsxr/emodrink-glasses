@@ -85,7 +85,7 @@ struct HermesGlassesApp: App {
             hermesVM: session,
             catalog: DrinkCatalog.bundled(),
             store: MachineStore(directory: showcaseDirectory),
-            stopLiveDrinkMode: { [weak emoDrink] in emoDrink?.stopDrinkMode() }))
+            stopLiveDrinkMode: { [weak emoDrink] in emoDrink?.stopForShowcase() }))
     }
 
     var body: some Scene {

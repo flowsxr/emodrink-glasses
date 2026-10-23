@@ -109,6 +109,7 @@ extension HermesSessionViewModel {
     /// GlassesLink's session reported an error (wired in init). Notices
     /// for update cases; other errors are shown only while an EmoDrink
     /// glasses session is running (the basics screen logs its own).
+    /// During a showcase run all of them go to Taka's run notice.
     func handleSessionError(_ error: DeviceSessionError) {
         NSLog("[EmoDrink] session error \(error) while \(connectionState)")
         if error == .dwaOutOfStuRange {
@@ -116,7 +117,7 @@ extension HermesSessionViewModel {
             // once per app run, whatever the session is doing.
             guard !dwaOutOfRangeNoticeShown else { return }
             dwaOutOfRangeNoticeShown = true
-            if let issue = noticeIssue(for: error) { show(notice: issue.message, action: issue.action) }
+            if let issue = noticeIssue(for: error) { reportNotice(issue.message, action: issue.action) }
             return
         }
         if let issue = noticeIssue(for: error) {
@@ -125,14 +126,14 @@ extension HermesSessionViewModel {
             if connectionState == .connecting {
                 glassesConnectIssue = issue
             } else {
-                show(notice: issue.message, action: issue.action)
+                reportNotice(issue.message, action: issue.action)
             }
             return
         }
         // While connecting the connect path reports the failure itself
         // (and may fall back to the phone); a second alert would race it.
         guard connectionState != .connecting, glassesSessionRunning else { return }
-        show(error.localizedDescription)
+        reportError(error.localizedDescription)
     }
 
     /// Session errors that are news, not faults: shown as a notice, with
