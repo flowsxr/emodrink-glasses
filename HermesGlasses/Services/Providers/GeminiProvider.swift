@@ -13,8 +13,8 @@ struct GeminiProvider: AIProvider {
     let requiresKey = true
     let supportsVision = true
     let curatedModels = [
-        ModelOption(id: "gemini-2.5-flash", label: "2.5 Flash - fast"),
-        ModelOption(id: "gemini-2.5-pro", label: "2.5 Pro - smartest"),
+        // The 2.5 models are closed to new keys (404).
+        ModelOption(id: "gemini-3.5-flash-lite", label: "3.5 Flash Lite - fast"),
     ]
 
     func buildRequest(_ req: AIRequest) throws -> URLRequest {

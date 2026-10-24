@@ -69,6 +69,16 @@ enum BundledAIKey {
                 defaults.set(config.model, forKey: "direct_model_\(config.provider)")
             }
             defaults.set(true, forKey: seededKey)
+        } else if let current = defaults.string(forKey: "direct_provider_id"),
+                  followsBundledProvider(current: current, currentKey: DirectClient.loadKey(for: current),
+                                         bundled: config.provider,
+                                         seededHash: defaults.string(forKey: keyHashKey)) {
+            // A build that bundles another provider (the OpenRouter account
+            // went away): installs still on our key move with it.
+            defaults.set(config.provider, forKey: "direct_provider_id")
+            if !config.model.isEmpty {
+                defaults.set(config.model, forKey: "direct_model_\(config.provider)")
+            }
         }
         let stored = DirectClient.loadKey(for: config.provider)
         switch keychainAction(stored: stored, bundled: config.key,
@@ -103,6 +113,15 @@ enum BundledAIKey {
         // A different key: ours from an older build (rotate), or the user's.
         if let seededHash, seededHash == sha256Hex(stored) { return .write }
         return .leave
+    }
+
+    /// Pure: should an install on `current` switch to the bundled provider?
+    /// Only while `current` still holds the key we seeded, so a provider the
+    /// user set up with their own key is never taken away.
+    static func followsBundledProvider(current: String, currentKey: String?,
+                                       bundled: String, seededHash: String?) -> Bool {
+        guard current != bundled, let currentKey, let seededHash else { return false }
+        return sha256Hex(currentKey) == seededHash
     }
 
     static func sha256Hex(_ text: String) -> String {

@@ -46,5 +46,23 @@ expect(BundledAIKey.keychainAction(stored: userKey, bundled: newKey, seededHash:
 expect(BundledAIKey.keychainAction(stored: userKey, bundled: newKey, seededHash: nil) == A.leave,
        "a user key with no seed history is never overwritten")
 
+// A build that bundles a different provider moves installs still on our
+// seeded key over to it; a provider the user set up themselves stays.
+expect(BundledAIKey.followsBundledProvider(current: "openrouter", currentKey: oldKey,
+                                           bundled: "gemini", seededHash: oldHash),
+       "still on our seeded key: follow the new bundled provider")
+expect(!BundledAIKey.followsBundledProvider(current: "openrouter", currentKey: userKey,
+                                            bundled: "gemini", seededHash: oldHash),
+       "a key the user typed: keep their provider")
+expect(!BundledAIKey.followsBundledProvider(current: "openrouter", currentKey: nil,
+                                            bundled: "gemini", seededHash: oldHash),
+       "no key on the current provider: keep it")
+expect(!BundledAIKey.followsBundledProvider(current: "openrouter", currentKey: oldKey,
+                                            bundled: "gemini", seededHash: nil),
+       "no seed history: keep the provider")
+expect(!BundledAIKey.followsBundledProvider(current: "gemini", currentKey: oldKey,
+                                            bundled: "gemini", seededHash: oldHash),
+       "already on the bundled provider: nothing to switch")
+
 print(failures == 0 ? "\nALL PASS" : "\n\(failures) FAILURE(S)")
 exit(failures == 0 ? 0 : 1)
