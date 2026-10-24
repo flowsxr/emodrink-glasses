@@ -2,8 +2,8 @@
 // ClipRenderer.swift
 //
 // Renders a SwiftUI animation (ClipArt: a view of progress t in 0...1) into
-// a 600 x 600 H.264 MP4 for the lens: one LensRenderer frame per tick,
-// copied into a pixel buffer and appended through AVAssetWriter. Frames go
+// an H.264 MP4 for the lens: one LensRenderer frame per tick (drawn at 600 x
+// 600), scaled into a `videoSide` pixel buffer and appended through AVAssetWriter. Frames go
 // to a temp file beside the target, moved into place only on success; a
 // failed or cancelled render leaves nothing behind. AVFoundation, CoreVideo
 // and SwiftUI only (no UIKit), so tests/showcase-clips runs on macOS.
@@ -24,13 +24,18 @@ enum ClipRenderer {
         case writerFailed(String)
     }
 
+    /// The clip's video is this many pixels square. Meta's Display docs: keep
+    /// videos under 400 px per side and 70,000 pixels; the 600 x 600 clips
+    /// got `playbackFailed` from the glasses. 264 x 264 = 69,696.
+    static let videoSide = 264
+
     /// Renders `duration` seconds at `fps` to `url` (replacing any file
     /// there). Frame i shows `frame(i / (n - 1))`, so the clip starts at
     /// t = 0 and its last frame is t = 1.
     @MainActor
     static func render<V: View>(duration: TimeInterval, fps: Int = 30, to url: URL,
                                 frame: (Double) -> V) async throws {
-        let width = Int(LensRenderer.size.width), height = Int(LensRenderer.size.height)
+        let width = videoSide, height = videoSide
         let count = max(1, Int((duration * Double(fps)).rounded()))
         let fm = FileManager.default
         let temp = url.deletingLastPathComponent()
@@ -46,7 +51,11 @@ enum ClipRenderer {
                 AVVideoWidthKey: width,
                 AVVideoHeightKey: height,
                 AVVideoCompressionPropertiesKey: [
-                    AVVideoAverageBitRateKey: 4_000_000,
+                    // The SDK downloads the whole file and streams it to the
+                    // glasses before playback starts (~150 KB/s seen): at 4
+                    // Mbit/s the 10 s navigate clip was 1.1 MB and never began
+                    // before the next step. 200 kbit/s: ~220 KB, art still clean.
+                    AVVideoAverageBitRateKey: 200_000,
                     AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
                     AVVideoMaxKeyFrameIntervalKey: fps,
                 ] as [String: Any],

@@ -553,7 +553,11 @@ final class GlassesLink {
     /// MP4. Returns true when the SDK accepted the send.
     @discardableResult
     func sendVideo(uri: String, label: String) async -> Bool {
-        await sendOrQueue(label: label) { VideoPlayer(provider: .uri(uri), codec: .mp4) }
+        await sendOrQueue(label: label) {
+            VideoPlayer(provider: .uri(uri), codec: .mp4, onError: { [weak self] error in
+                Task { @MainActor in self?.add("video error: \(error)") }
+            })
+        }
     }
 
     /// Send now when the display is `.started`, else queue (pending-action
@@ -629,6 +633,13 @@ final class GlassesLink {
         do {
             let capability = try session.addDisplay()
             add("addDisplay OK; display.start()")
+            // What the glasses did with a clip: the send only says it was
+            // accepted, not that it played.
+            capability.onPlaybackEvent = { [weak self] event in
+                Task { @MainActor in
+                    self?.add("video event: \(event.type) (error \(event.errorType))")
+                }
+            }
 
             let (stateStream, continuation) = AsyncStream.makeStream(of: DisplayState.self)
             displayStateContinuation = continuation

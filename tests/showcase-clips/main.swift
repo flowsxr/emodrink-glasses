@@ -1,7 +1,7 @@
 //
 // Standalone tests for the showcase clips (MorningClipArt, ScanClipArt,
-// NavigateClipArt, ClipRenderer). Renders 2-second clips at the lens's real
-// 600 x 600 pixels, checks duration, size and the finished state, and writes
+// NavigateClipArt, ClipRenderer). Renders 2-second clips (art drawn at 600 x
+// 600, encoded at the lens video size), checks duration, size and the finished state, and writes
 // stills at t = 0.2, 0.5 and 0.95 of every clip to
 // .superpowers/sdd/2026-10-21-showcase/clips/ for eyeballing.
 // Run from the repo root on macOS 14+ (the test reads the catalogue JSON off disk):
@@ -32,9 +32,11 @@ func expect(_ cond: Bool, _ label: String) {
     if cond { print("PASS \(label)") } else { failures += 1; print("FAIL \(label)") }
 }
 
-/// RGB of one pixel, (x, y) measured from the top-left.
+/// RGB of one pixel, (x, y) measured from the top-left in the art's 600 x
+/// 600 space (the video itself is smaller: ClipRenderer.videoSide).
 func pixel(_ image: CGImage, _ x: Int, _ y: Int) -> (r: Int, g: Int, b: Int) {
     let w = image.width, h = image.height
+    let x = min(w - 1, x * w / 600), y = min(h - 1, y * h / 600)
     var buf = [UInt8](repeating: 0, count: w * h * 4)
     let ctx = CGContext(data: &buf, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
                         space: CGColorSpaceCreateDeviceRGB(),
@@ -82,7 +84,11 @@ func checkClip(_ url: URL, _ name: String, duration: Double) async {
     expect(abs(seconds - duration) <= 0.1, "\(name) lasts \(duration) s (got \(String(format: "%.3f", seconds)))")
     let track = try? await asset.loadTracks(withMediaType: .video).first
     let size = (try? await track?.load(.naturalSize)) ?? .zero
-    expect(size == CGSize(width: 600, height: 600), "\(name) video track is 600 x 600 (got \(size))")
+    let side = CGFloat(ClipRenderer.videoSide)
+    expect(size == CGSize(width: side, height: side), "\(name) video track is \(Int(side)) x \(Int(side)) (got \(size))")
+    // Meta's Display docs: under 400 px per side and 70,000 pixels, or the
+    // glasses answer playbackFailed.
+    expect(size.width < 400 && size.width * size.height <= 70_000, "\(name) fits the lens video limits")
     for t in [0.2, 0.5, 0.95] {
         if let image = await frame(url, at: t, duration: duration) {
             writePNG(image, "\(name)-t\(Int(t * 100))")

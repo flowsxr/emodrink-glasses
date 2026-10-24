@@ -89,6 +89,8 @@ final class LocalClipServer: @unchecked Sendable {
                 connection.cancel()
                 return
             }
+            NSLog("[Basics] clip server: %@ from %@", request.components(separatedBy: "\r\n").first ?? "?",
+                  String(describing: connection.endpoint))
             self.respond(to: request, on: connection)
         }
     }

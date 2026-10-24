@@ -68,23 +68,23 @@ EmoDrink.
 
 ## Owner device checks
 
-Not yet done on a device; the build was written without glasses.
+2026-10-24, on the owner's Ray-Ban Display: a full showcase run (navigate,
+morning, scan, deck), Reset and a second guest all work. The clips play
+over HTTP at 264 x 264 and 200 kbit/s (see CLAUDE.md for why). The glasses'
+firmware draws a playback bar under every video; the SDK cannot hide it.
 
 **The results change CODE DEFAULTS, before the handover build.** The
-Developer toggles (`showcase_clip_transport`, `showcase_glasses_swipe`,
-`showcase_glasses_speech`) are per-device settings: flipping them on the
+Developer toggles (`showcase_glasses_swipe`, `showcase_glasses_speech`) are per-device settings: flipping them on the
 owner's phone does not reach Taka's install. Whatever the spikes prove goes
 into the defaults in code, then the build number is bumped:
 
-- clip transport: the `== "http"` check in
-  `HermesDisplayManager.playShowcaseClip` (file is the fallthrough) and the
-  `"file"` `@AppStorage` default in `SettingsView`;
 - swipe: `ShowcaseViewModel.glassesSwipeDefault` (now `false`);
 - glasses speech: `GlassesSpeechRouting.isEnabled` (`defaults.bool`, so off).
 
 - **Showcase spikes panel** (Settings › Glasses › Developer › Showcase
   spikes): video by file and by http, card latency, and glasses speech.
-  Record which clip transport plays and set `showcase_clip_transport` to it.
+  Clip transport is settled: http only (2026-10-24, the SDK rejects
+  `file://` with `invalidVideoURL`).
 - **Swipe:** `showcase_glasses_swipe` is off by default. Turn it on in the
   spikes and check that a swipe turns the deck once and does NOT also move the
   focus between the lens buttons; the directions are guessed from SDK names,
@@ -124,9 +124,10 @@ Center:
 
 ## Before an App Store release
 
-- The bundled OpenRouter and Gemini keys are stored as plain text in the
-  app's Info.plist, and anyone with the IPA can read them. Set spending
-  limits on both keys now. Before going public, move them behind a small
+- The bundled Gemini key (assistant and speech, one key since 2026-10-24:
+  the OpenRouter account went away) is stored as plain text in the app's
+  Info.plist, and anyone with the IPA can read it. Set a spending limit on
+  it now. Before going public, move them behind a small
   proxy, or ask the user for a key.
 - Screenshots (6.9" iPhone), description, keywords, support URL, age rating.
 - Review notes as above, plus a short video of the glasses flow.

@@ -97,16 +97,12 @@ final class HermesDisplayManager {
     private var lastReplyText: String = ""
     /// The showcase card's button handler (see showShowcaseCard).
     private var onShowcaseTap: ((ShowcaseButton) -> Void)?
-    /// Serves the playing clip in "http" transport; stopped when the clip
-    /// ends or anything replaces it.
+    /// Serves the playing clip; stopped when the clip ends or anything
+    /// replaces it.
     private var clipServer: LocalClipServer?
     /// Bumped by every clip and every other screen, so a clip whose server
     /// start or send finishes late knows it was replaced.
     private var clipGeneration = 0
-
-    /// Developer setting (Ruling 1): "file" (default) sends a clip as its
-    /// file:// URI; "http" serves it from LocalClipServer on 127.0.0.1.
-    nonisolated static let clipTransportKey = "showcase_clip_transport"
 
     init(link: GlassesLink) {
         self.link = link
@@ -336,9 +332,10 @@ final class HermesDisplayManager {
         case failed
     }
 
-    /// Plays a rendered clip full screen through GlassesLink.sendVideo, as a
-    /// file:// URI or over local HTTP (`clipTransportKey`). The phone mirror
-    /// gets the clip first, glasses or not.
+    /// Plays a rendered clip full screen through GlassesLink.sendVideo,
+    /// served from LocalClipServer on 127.0.0.1: the SDK rejects anything but
+    /// an http(s) URL (`invalidVideoURL` for file://). The phone mirror gets
+    /// the clip first, glasses or not.
     @discardableResult
     func playShowcaseClip(_ fileURL: URL) async -> ClipOutcome {
         let next = LensContent.showcase(image: nil, clip: fileURL)
@@ -351,21 +348,21 @@ final class HermesDisplayManager {
         let generation = clipGeneration
         guard isActive else { return .noLens }
 
-        var uri = fileURL.absoluteString
-        if UserDefaults.standard.string(forKey: Self.clipTransportKey) == "http" {
-            let server = LocalClipServer(fileURL: fileURL)
-            do {
-                let url = try await server.start()
-                guard generation == clipGeneration else {
-                    server.stop()
-                    return .superseded
-                }
-                clipServer = server
-                uri = url.absoluteString
-            } catch {
-                debug("Clip server failed (\(error)); sending the file URI")
-            }
+        let server = LocalClipServer(fileURL: fileURL)
+        let uri: String
+        do {
+            uri = try await server.start().absoluteString
+        } catch {
+            debug("Clip server failed (\(error)); the clip cannot play")
+            server.stop()
+            guard generation == clipGeneration else { return .superseded }
+            return isActive ? .failed : .noLens
         }
+        guard generation == clipGeneration else {
+            server.stop()
+            return .superseded
+        }
+        clipServer = server
         guard generation == clipGeneration else { return .superseded }
         guard isActive else { return .noLens }
         // Through the same serialized pipeline as the cards: one send in
@@ -485,6 +482,10 @@ final class HermesDisplayManager {
                         self.debug("Display send failed (display \(self.link.displayStateText))")
                     }
                 case .video(let uri, let completion):
+                    if self.clipOnLens {
+                        self.clipOnLens = false
+                        await self.link.stopVideo()
+                    }
                     let sent = await self.link.sendVideo(uri: uri, label: "showcase clip")
                     self.clipOnLens = sent
                     completion.resume(returning: sent)

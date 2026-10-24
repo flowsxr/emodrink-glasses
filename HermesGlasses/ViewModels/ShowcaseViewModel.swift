@@ -38,7 +38,7 @@ final class ShowcaseViewModel {
     static let askTimeout: TimeInterval = 6
     static let askMaxTokens = 200
     /// Bump when clip art changes so cached files are re-rendered.
-    nonisolated static let clipArtVersion = "v1"
+    nonisolated static let clipArtVersion = "v3-264px-200k"
     private static let prerenderDebounceNanos: UInt64 = 500_000_000
     private static let logger = Logger(subsystem: "com.flowsxr.emodrink", category: "showcase")
 
