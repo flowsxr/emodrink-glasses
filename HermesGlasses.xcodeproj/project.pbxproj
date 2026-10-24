@@ -78,6 +78,7 @@
 		AAAA00000000000000000E0B /* EmoDrink/PhysiologyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E0C /* EmoDrink/PhysiologyStore.swift */; };
 		AAAA00000000000000000E0D /* EmoDrink/VendingMachineGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E0E /* EmoDrink/VendingMachineGate.swift */; };
 		AAAA00000000000000000E0F /* EmoDrink/VendingMachineDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E10 /* EmoDrink/VendingMachineDetector.swift */; };
+		AAAA00000000000000000F88 /* DrinkSighting.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000F89 /* DrinkSighting.swift */; };
 		AAAA00000000000000000E11 /* EmoDrink/EmoDrinkPersona.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E12 /* EmoDrink/EmoDrinkPersona.swift */; };
 		AAAA00000000000000000E13 /* EmoDrink/EmoDrinkCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E14 /* EmoDrink/EmoDrinkCommands.swift */; };
 		AAAA00000000000000000E19 /* BundledAIKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA00000000000000000E1A /* BundledAIKey.swift */; };
@@ -178,6 +179,7 @@
 		AAAA00000000000000000E0C /* EmoDrink/PhysiologyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/PhysiologyStore.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E0E /* EmoDrink/VendingMachineGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/VendingMachineGate.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E10 /* EmoDrink/VendingMachineDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/VendingMachineDetector.swift; sourceTree = "<group>"; };
+		AAAA00000000000000000F89 /* DrinkSighting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/DrinkSighting.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E12 /* EmoDrink/EmoDrinkPersona.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/EmoDrinkPersona.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E14 /* EmoDrink/EmoDrinkCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/EmoDrinkCommands.swift; sourceTree = "<group>"; };
 		AAAA00000000000000000E1A /* BundledAIKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmoDrink/BundledAIKey.swift; sourceTree = "<group>"; };
@@ -328,6 +330,7 @@
 				AAAA00000000000000000E0C /* EmoDrink/PhysiologyStore.swift */,
 				AAAA00000000000000000E0E /* EmoDrink/VendingMachineGate.swift */,
 				AAAA00000000000000000E10 /* EmoDrink/VendingMachineDetector.swift */,
+				AAAA00000000000000000F89 /* DrinkSighting.swift */,
 				AAAA00000000000000000E12 /* EmoDrink/EmoDrinkPersona.swift */,
 				AAAA00000000000000000E14 /* EmoDrink/EmoDrinkCommands.swift */,
 				AAAA00000000000000000E1A /* BundledAIKey.swift */,
@@ -500,6 +503,7 @@
 				AAAA00000000000000000E0B /* EmoDrink/PhysiologyStore.swift in Sources */,
 				AAAA00000000000000000E0D /* EmoDrink/VendingMachineGate.swift in Sources */,
 				AAAA00000000000000000E0F /* EmoDrink/VendingMachineDetector.swift in Sources */,
+				AAAA00000000000000000F88 /* DrinkSighting.swift in Sources */,
 				AAAA00000000000000000E11 /* EmoDrink/EmoDrinkPersona.swift in Sources */,
 				AAAA00000000000000000E13 /* EmoDrink/EmoDrinkCommands.swift in Sources */,
 				AAAA00000000000000000E19 /* BundledAIKey.swift in Sources */,

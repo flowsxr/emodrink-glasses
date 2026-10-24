@@ -12,7 +12,8 @@
 // three again; "something else" offers the next three. Ends on thanks,
 // stop, or 120 s of silence. DRINK MODE: every `intervalSeconds` the latest
 // frame is feature-printed; VendingMachineGate decides whether to spend one
-// vision call on "is there a vending machine"; YES starts a moment. "Check
+// vision call on what is in view (DrinkSighting: a machine, some drinks, the
+// names on their labels); a machine or a drink starts a moment. "Check
 // now" skips the change gate (never the budget). Every decision in between
 // is pure and tested; this file only wires.
 //
@@ -138,6 +139,11 @@ final class EmoDrinkViewModel {
     /// Bumped by `stopForShowcase`: a pick still fetching its snapshot
     /// must not put a moment on the showcase's lens.
     @ObservationIgnored private var pickGeneration = 0
+    /// What the camera read for this moment; spoken once, with the offer.
+    @ObservationIgnored private var pendingSighting: DrinkSighting.Plan?
+    /// The one drink in view (a known one), offered first until
+    /// "something else" moves past it.
+    @ObservationIgnored private var lead: Drink?
 
     init(hermesVM: HermesSessionViewModel) {
         self.hermesVM = hermesVM
@@ -280,8 +286,10 @@ final class EmoDrinkViewModel {
 
     // MARK: Step A: three drinks
 
-    /// Voice, button, or a detection all land here.
-    func pickNow() async {
+    /// Voice, button, or a detection all land here. A detection brings what
+    /// the camera read: the choices then come from the drinks in view when
+    /// two or more are in the catalogue, and one drink in view goes first.
+    func pickNow(sighting: DrinkSighting.Plan? = nil) async {
         guard let catalog else {
             fail("The drink catalogue is missing from this build.")
             return
@@ -289,30 +297,55 @@ final class EmoDrinkViewModel {
         let gen = pickGeneration
         guard let snapshot = await refreshSnapshot(), gen == pickGeneration else { return }
         let hour = Calendar.current.component(.hour, from: Date())
-        guard let rec = DrinkRecommender.recommend(snapshot: snapshot, catalog: catalog, hour: hour,
+        var pool = catalog
+        if case .offer(let seen, _, _) = sighting, !seen.isEmpty { pool = DrinkCatalog(drinks: seen) }
+        guard let rec = DrinkRecommender.recommend(snapshot: snapshot, catalog: pool, hour: hour,
                                                    lowSugar: lowSugar, language: language) else { return }
         recommendation = rec
         offerOffset = 0
+        pendingSighting = sighting
+        if case .single(let known, _) = sighting { lead = known } else { lead = nil }
         offerChoices(speakWithAI: true)
     }
 
     private func offerChoices(speakWithAI: Bool) {
         guard let rec = recommendation, let catalog, let snapshot = currentSnapshot, !rec.ranked.isEmpty else { return }
         let count = min(Self.optionCount, rec.ranked.count)
-        options = (0..<count).map { rec.ranked[(offerOffset + $0) % rec.ranked.count] }
+        if let lead {
+            options = [lead] + rec.ranked.filter { $0 != lead }.prefix(Self.optionCount - 1)
+        } else {
+            options = (0..<count).map { rec.ranked[(offerOffset + $0) % rec.ranked.count] }
+        }
         currentPick = nil
         step = .choices
         if !drinkModeOn { hermesVM.onEmoDrinkSessionEnding = { [weak self] in self?.endMoment(saying: nil) } }
-        let prompt = EmoDrinkPersona.systemPrompt(snapshot: snapshot, pick: options[0], recommendation: rec,
+        // With one drink in view the rule's own pick is the one to argue for.
+        let focus = lead == nil ? options[0] : rec.pick
+        let prompt = EmoDrinkPersona.systemPrompt(snapshot: snapshot, pick: focus, recommendation: rec,
                                                   catalog: catalog, sourceLabel: currentSourceLabel, language: language)
         hermesVM.setPersonaOverride(prompt)
         currentPrompt = prompt
         showChoicesOnLens()
         resetMomentTimer()
-        let fallback = strings.choicesLine(names: options.map(name))
+        var request = EmoDrinkPersona.choicesRequest(options: options)
+        var fallback = strings.choicesLine(names: options.map(name))
+        switch pendingSighting {
+        case .offer(_, let seen, let unknown)?:
+            request = EmoDrinkPersona.sightingRequest(seen: seen, unknown: unknown, options: options)
+            let seenLine = strings.seenLine(names: seen.map(name) + unknown)
+            fallback = seenLine.isEmpty ? fallback : seenLine + " " + fallback
+        case .single(let known, let spoken)?:
+            let suggestion: Drink? = known == rec.pick ? nil : rec.pick
+            request = EmoDrinkPersona.singleRequest(seen: known, name: spoken, suggestion: suggestion)
+            fallback = strings.singleLine(name: known.map(name) ?? spoken, known: known != nil,
+                                          suggestion: suggestion.map(name))
+        case .none?, nil:
+            break
+        }
+        pendingSighting = nil
         if speakWithAI {
             let offered = options
-            Task { await speakAI(prompt: prompt, request: EmoDrinkPersona.choicesRequest(options: offered), fallback: fallback) {
+            Task { await speakAI(prompt: prompt, request: request, fallback: fallback) {
                 [weak self] in self?.step == .choices && self?.options == offered
             } }
         } else {
@@ -362,6 +395,7 @@ final class EmoDrinkViewModel {
     /// "something else" / 「他には」: the next three in rank order.
     func somethingElse() {
         guard momentActive, let rec = recommendation else { return }
+        lead = nil
         offerOffset = (offerOffset + Self.optionCount) % max(rec.ranked.count, 1)
         offerChoices(speakWithAI: false)
     }
@@ -430,6 +464,8 @@ final class EmoDrinkViewModel {
         currentPick = nil
         recommendation = nil
         currentPrompt = nil
+        pendingSighting = nil
+        lead = nil
         hermesVM.setPersonaOverride(nil)
         if !drinkModeOn { hermesVM.onEmoDrinkSessionEnding = nil }
         gate.startCooldown(at: Date())
@@ -594,7 +630,7 @@ final class EmoDrinkViewModel {
         defer { checkingNow = false }
         switch await check(image) {
         case .yes: break
-        case .no: flashNotice(strings.noMachine)
+        case .no: flashNotice(strings.noDrinks)
         case .failed: flashNotice(strings.visionCheckFailed)
         }
     }
@@ -752,13 +788,15 @@ final class EmoDrinkViewModel {
             return .failed("could not encode the frame")
         }
         do {
-            let reply = try await oneShot.askOneShot(systemPrompt: VendingMachineDetector.systemPrompt,
-                                                     userText: VendingMachineDetector.userText,
+            let reply = try await oneShot.askOneShot(systemPrompt: DrinkSighting.systemPrompt,
+                                                     userText: DrinkSighting.userText,
                                                      photoJPEG: jpeg, timeout: Self.detectTimeout)
             // The call works again: drop a stale failure line.
             if aiNotice?.hasPrefix(Self.visionNoticePrefix) == true { aiNotice = nil }
-            guard drinkModeOn, !momentActive, VendingMachineDetector.isYes(reply) else { return .no }
-            await pickNow()
+            guard drinkModeOn, !momentActive, let catalog else { return .no }
+            let plan = DrinkSighting.plan(DrinkSighting.parse(reply), catalog: catalog)
+            guard plan != .none else { return .no }
+            await pickNow(sighting: plan)
             return .yes
         } catch {
             // The loop stays quiet and keeps watching; the home card shows

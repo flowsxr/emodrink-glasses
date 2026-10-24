@@ -199,9 +199,18 @@ or the iPhone camera in phone mode.
   `minimumScaleFactor` that lets text fall under 24 px is a bug.
 - **Clips are pre-rendered and cached.** `ClipRenderer` runs whenever the
   machine, profile or language changes (the cache key covers every input) and
-  is awaited on Start ("Preparing" on the phone). `showcase_clip_transport`
-  is `file` (default, `file://` URIs) or `http` (the local server from the
-  spikes); flip it if the glasses can't read the file.
+  is awaited on Start ("Preparing" on the phone). Clips go to the lens over
+  HTTP only (`LocalClipServer` on 127.0.0.1): the SDK rejects `file://` with
+  `invalidVideoURL` "must be non-blank with http or https scheme", and a
+  rejected clip shows its t = 1 still (navigate's is "Here"), which is easy
+  to mistake for a clip that played. The video is `ClipRenderer.videoSide` (264) square:
+  Meta's limit is under 400 px a side and 70,000 pixels, and 600 x 600 clips
+  were accepted by the send and then answered `playbackFailed`. The art is
+  still drawn at 600 and scaled down; bump `clipArtVersion` when either changes.
+  Encoded at 200 kbit/s: the SDK downloads the whole file and streams it to
+  the glasses before `started` (~150 KB/s), so at 4 Mbit/s the first clip
+  never began before the next step replaced it. The `[Basics] video event`
+  lines in the log are the truth about playback; `send OK` only means accepted.
 - **One display queue carries cards AND clips.** `HermesDisplayManager`'s
   serialized queue sends both, and `stopVideo` runs before a card replaces a
   clip. Bypassing the queue is how a card ended up under a playing clip.
@@ -276,6 +285,18 @@ or the iPhone camera in phone mode.
   physiology feed is this repo's `mock/physiology.json` on
   raw.githubusercontent.com: pushing a change to that file changes what
   every install reads.
+- **Drink mode reads the labels (`DrinkSighting`, pure, tested in
+  `tests/emodrink-sighting`).** The vision call asks for JSON (scene machine /
+  drinks / none, plus every readable drink name); a reply without JSON falls
+  back to YES/NO. Names match the catalogue through `DrinkNameMatcher`. Two or
+  more known drinks in view: the choices come from those only. One drink in
+  view (not a machine): it goes first, the spoken line comments on it and
+  suggests the rule's pick from the whole catalogue. Drinks the catalogue lacks
+  are NAMED, never dropped (the owner asked), but never offered or scored.
+- **"Shall I drink this?" gets a photo.** `VisualQueryDetector` also fires on a
+  bare this/that/these/those ending the question (unless the word before it
+  points back at the talk: about, of, like...) and on Japanese これ/この (not
+  これから/これまで). Tested in `tests/visual-query`.
 - **Language is resolved once per session.** `HermesSessionViewModel
   .applyLanguage()` turns `emodrink_language` (auto/en/ja; auto = the
   iPhone's FIRST preferred language) into a recognizer locale and a voice

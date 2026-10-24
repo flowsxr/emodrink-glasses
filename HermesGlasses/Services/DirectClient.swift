@@ -274,6 +274,8 @@ enum VisualQueryDetector {
         "session", "app", "voice", "sound", "response", "reply", "much",
         "long", "short", "many", "far", "fast", "slow", "bit", "lot",
         "kind", "sort", "type",
+        // Replies about the talk, not a thing: "is that so", "is that right"
+        "so", "right", "true", "ok", "okay", "correct", "fine", "all",
         // Auxiliary/copular verbs: "this is a test", "that was fun" are
         // not about anything visible
         "is", "was", "are", "were", "be", "being", "been", "isn", "wasn",
@@ -281,6 +283,22 @@ enum VisualQueryDetector {
         "does", "did", "done", "has", "had", "have", "gets", "got", "goes",
         "went", "seems", "means", "works", "sounds", "feels", "happened",
     ]
+
+    /// A bare pointer ending the question: "shall I drink this?", "should I
+    /// buy that". The wearer is holding it up or looking at it.
+    private static let trailingPointerPattern = try? NSRegularExpression(
+        pattern: "(?:^|\\s)(\\w+)\\s+(this|that|these|those)\\s*[?.!]*\\s*$",
+        options: [.caseInsensitive]
+    )
+
+    /// Words before a trailing "that" that point back at the conversation.
+    private static let backReferenceWords: Set<String> = [
+        "about", "of", "like", "with", "said", "mean", "meant", "to", "for", "do", "does", "did",
+    ]
+
+    /// Japanese pointers at something in view; これから/これまで are about time.
+    private static let japanesePointers = ["これ", "この"]
+    private static let japaneseTimePhrases = ["これから", "これまで"]
 
     static let photoMemoryWindow: TimeInterval = 120
 
@@ -292,6 +310,17 @@ enum VisualQueryDetector {
     ) -> Bool {
         let lowered = text.lowercased()
         if keywords.contains(where: { lowered.contains($0) }) {
+            return true
+        }
+        var japanese = text
+        japaneseTimePhrases.forEach { japanese = japanese.replacingOccurrences(of: $0, with: "") }
+        if japanesePointers.contains(where: { japanese.contains($0) }) {
+            return true
+        }
+        if let trailingPointerPattern,
+           let match = trailingPointerPattern.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+           let before = Range(match.range(at: 1), in: text),
+           !backReferenceWords.contains(text[before].lowercased()) {
             return true
         }
         guard let deicticPattern else { return false }

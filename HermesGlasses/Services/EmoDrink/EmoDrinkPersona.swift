@@ -29,6 +29,36 @@ enum EmoDrinkPersona {
             + options.map { "\($0.name) (\($0.nameJa))" }.joined(separator: ", ") + "."
     }
 
+    /// Step A after the camera read the labels: say what is in view (the
+    /// drinks not in the list by name only), then offer the options.
+    static func sightingRequest(seen: [Drink], unknown: [String], options: [Drink]) -> String {
+        var parts: [String] = []
+        if !seen.isEmpty {
+            parts.append("The camera sees these drinks from your list: " + seen.map { "\($0.name) (\($0.nameJa))" }.joined(separator: ", ") + ".")
+        }
+        if !unknown.isEmpty {
+            parts.append("It also sees " + unknown.joined(separator: ", ")
+                + ", which are not in your list: name them, but say nothing else about them.")
+        }
+        parts.append("In one or two short spoken sentences, say what you see, then offer these, in this order, naming each once: "
+            + options.map { "\($0.name) (\($0.nameJa))" }.joined(separator: ", ") + ".")
+        return parts.joined(separator: " ")
+    }
+
+    /// One drink in view: a word on it for the wearer's body today, then
+    /// the rule's suggestion from the list (nil: the drink in view is it).
+    static func singleRequest(seen: Drink?, name: String, suggestion: Drink?) -> String {
+        let subject = seen.map { "\($0.name) (\($0.nameJa))" } ?? name
+        var text = "The wearer is looking at one drink: \(subject)."
+        if seen == nil { text += " It is not in your list, so you know nothing about it beyond its name." }
+        if let suggestion {
+            text += " In one or two short spoken sentences, name it, say whether it suits their body today, then suggest \(suggestion.name) (\(suggestion.nameJa)) from your list instead."
+        } else {
+            text += " In one or two short spoken sentences, name it and say it suits their body today."
+        }
+        return text
+    }
+
     /// Step B: the wearer chose one; one warm sentence about why it fits.
     static func chosenRequest(pick: Drink, language: Language) -> String {
         "The wearer chose \(pick.name) (\(pick.nameJa)). Say one warm sentence about why it fits, in \(language == .ja ? "Japanese" : "English")."

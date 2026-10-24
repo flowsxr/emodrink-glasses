@@ -76,6 +76,8 @@ struct EmoDrinkStrings: Equatable {
     var stoppedHint: String { ja ? "「Start」をタップすると自販機を探します" : "Tap Start to watch for a vending machine" }
     var visionCheckFailed: String { ja ? "画像の確認に失敗しました" : "Vision check failed" }
     var noMachine: String { ja ? "自販機が見当たりません" : "No vending machine in view" }
+    /// Check now found neither a machine nor a drink.
+    var noDrinks: String { ja ? "飲み物が見当たりません" : "No drinks in view" }
     var cameraNotReady: String { ja ? "カメラの準備ができていません" : "Camera not ready yet" }
     var checkResting: String { ja ? "この1時間の確認回数を使い切りました" : "This hour's checks are used up" }
     var sessionDidNotStart: String { ja ? "セッションを開始できませんでした。" : "The session did not start." }
@@ -131,6 +133,31 @@ struct EmoDrinkStrings: Equatable {
         case 2: return "How about \(names[0]) or \(names[1])?"
         default: return "How about \(names.dropLast().joined(separator: ", ")), or \(names[names.count - 1])?"
         }
+    }
+
+    /// What the camera read, before the offer ("I see A, B, and C."). Empty
+    /// when nothing was readable, so a bare machine is not announced twice.
+    func seenLine(names: [String]) -> String {
+        guard !names.isEmpty else { return "" }
+        if ja { return names.joined(separator: "、") + "が見えます。" }
+        switch names.count {
+        case 1: return "I see \(names[0])."
+        case 2: return "I see \(names[0]) and \(names[1])."
+        default: return "I see \(names.dropLast().joined(separator: ", ")), and \(names[names.count - 1])."
+        }
+    }
+
+    /// Fallback for one drink in view: a word on it, then the list's best.
+    /// `suggestion` nil means the drink in view already is the best fit.
+    func singleLine(name: String, known: Bool, suggestion: String?) -> String {
+        if ja {
+            guard let suggestion else { return "\(name)ですね。今の体調にぴったりです。" }
+            return "\(name)ですね。" + (known ? "" : "リストにない飲み物なので、") + "今の体調には、\(suggestion)がおすすめです。"
+        }
+        guard let suggestion else { return "That's \(name). It suits you right now." }
+        return known
+            ? "That's \(name). For you right now, I'd go for \(suggestion)."
+            : "That's \(name). It isn't in my list, so for you right now I'd go for \(suggestion)."
     }
 
     /// Fallback after a choice: the drink, then up to two reasons.
