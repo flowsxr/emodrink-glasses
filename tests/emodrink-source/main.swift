@@ -31,7 +31,7 @@ let feedSnap = try? PhysiologySnapshot.decode(feed ?? Data())
 expect(feedSnap != nil && feedSnap?.source == "EmoDrink sample feed", "mock feed decodes")
 
 // Defaults.
-expect(EmoDrinkDefaults.defaultSourceURL == "https://raw.githubusercontent.com/mayaokonkwo/emodrink-glasses/main/mock/physiology.json", "default URL points at the repo's mock feed")
+expect(EmoDrinkDefaults.defaultSourceURL == "https://raw.githubusercontent.com/flowsxr/emodrink-glasses/main/mock/physiology.json", "default URL points at the repo's mock feed")
 expect(URL(string: EmoDrinkDefaults.defaultSourceURL) != nil, "default URL parses")
 
 // Remote source: a bad URL string is rejected up front.

@@ -10,7 +10,7 @@ EmoDrink ships as its own app, separate from Hermes Glasses:
 | Apple team | FLOWXR PTE. LTD. (`3U4384584Z`) |
 | URL scheme (Meta AI callback) | `emodrink://` |
 | Version | `MARKETING_VERSION` in the project, build number per upload |
-| Privacy policy | https://github.com/mayaokonkwo/emodrink-glasses/blob/main/docs/privacy.md |
+| Privacy policy | https://github.com/flowsxr/emodrink-glasses/blob/main/docs/privacy.md |
 
 The repo is a fork. Changes to Hermes Glasses never reach it, and the two
 apps can be installed side by side.

@@ -35,7 +35,7 @@ enum EmoDrinkDefaults {
     static let lowSugarKey = "emodrink_low_sugar"
     static let intervalKey = "emodrink_drink_mode_interval"
 
-    static let defaultSourceURL = "https://raw.githubusercontent.com/mayaokonkwo/emodrink-glasses/main/mock/physiology.json"
+    static let defaultSourceURL = "https://raw.githubusercontent.com/flowsxr/emodrink-glasses/main/mock/physiology.json"
     static let defaultMockProfile = MockProfile.shortNight
     static let defaultIntervalSeconds = 4
 }

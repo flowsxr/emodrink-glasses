@@ -46,4 +46,4 @@ link. Usage analytics in the toolkit are switched off in this app.
 ## Contact
 
 Questions: open an issue at
-https://github.com/mayaokonkwo/emodrink-glasses/issues
+https://github.com/flowsxr/emodrink-glasses/issues
