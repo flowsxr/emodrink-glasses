@@ -16,7 +16,7 @@ phone mode. In Japanese or English.
 <p align="center">
   <a href="docs/media/emodrink-demo.mp4"><img src="docs/media/demo-poster.jpg" width="720" alt="Demo video, 78 seconds: a frame from it shows the Your morning screen filmed through the Ray-Ban Display lens, next to a sharp copy of the same screen"></a>
 </p>
-<p align="center"><em><a href="docs/media/emodrink-demo.mp4">Watch the 78-second demo</a>: the showcase filmed through the lens and from the wearer's eyes, then live drink mode.</em></p>
+<p align="center"><em><a href="docs/media/emodrink-demo.mp4">Watch the 78-second demo</a>: the showcase filmed through the lens and from the wearer's eyes, then live drink mode, narrated with the app's own Gemini voice.</em></p>
 
 EmoDrink Glasses continues the [EmoDrink](https://dl.acm.org/doi/full/10.1145/3795011.3797399)
 work (Augmented Humans 2026, AHLab with Asahi as the study's industry
